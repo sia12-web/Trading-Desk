@@ -53,26 +53,15 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ message: 'No active subscriptions', processed: 0 })
     }
 
-    const results: Array<{ user_id: string; pair: string; status: string; agents?: string[]; error?: string }> = []
-
-    // Process sequentially — respect OANDA rate limits
+    // Process in background to avoid timing out the cron trigger
     for (const sub of subscriptions) {
-        try {
-            const intelligence = await runAgentsForPair(sub.user_id, sub.pair, client)
-
+        console.log(`[Agents Cron] Triggering background agents for ${sub.pair}`)
+        runAgentsForPair(sub.user_id, sub.pair, client).then(async (intelligence) => {
             const completedAgents: string[] = []
             if (intelligence.optimizer) completedAgents.push('optimizer')
             if (intelligence.news) completedAgents.push('news')
             if (intelligence.crossMarket) completedAgents.push('cross_market')
 
-            results.push({
-                user_id: sub.user_id,
-                pair: sub.pair,
-                status: completedAgents.length > 0 ? 'processed' : 'skipped',
-                agents: completedAgents,
-            })
-
-            // Daily Intelligence Briefing
             if (completedAgents.length > 0) {
                 let summary = ''
                 if (intelligence.optimizer) summary += `📊 *Indicators:* ${intelligence.optimizer.summary.substring(0, 100)}...\n`
@@ -85,25 +74,16 @@ export async function GET(req: NextRequest) {
                     url: `/story/${sub.pair.replace('/', '-')}`
                 }, client)
             }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unknown error'
-            console.error(`Agents cron: Failed for ${sub.user_id}/${sub.pair}:`, message)
-            results.push({ user_id: sub.user_id, pair: sub.pair, status: 'failed', error: message })
-        }
+        }).catch(err => {
+            console.error(`[Agents Cron] Background process FAILED for ${sub.pair}:`, err instanceof Error ? err.message : err)
+        })
 
-        // Delay between pairs to avoid rate limits
+        // Slight stagger to avoid rate limiting even in background
         await new Promise(resolve => setTimeout(resolve, 500))
     }
 
-    const processed = results.filter(r => r.status === 'processed').length
-    const skipped = results.filter(r => r.status === 'skipped').length
-    const failed = results.filter(r => r.status === 'failed').length
-
     return NextResponse.json({
-        message: 'Story agents cron complete',
-        processed,
-        skipped,
-        failed,
-        total: subscriptions.length,
+        message: 'Story agents triggered in background',
+        count: subscriptions.length,
     })
 }

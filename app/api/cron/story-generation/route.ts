@@ -71,8 +71,9 @@ export async function GET(req: NextRequest) {
         (todayEpisodes || []).map(e => `${e.user_id}:${e.pair}`)
     )
 
-    const results: Array<{ user_id: string; pair: string; status: string; reason?: string; error?: string }> = []
-
+    const results: Array<{ status: string }> = []
+    const taskIds: string[] = []
+    
     for (const sub of subscriptions) {
         const key = `${sub.user_id}:${sub.pair}`
         const instrument = sub.pair.replace('/', '_')
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
         // ── Check 1: Already generated today ──
         if (alreadyGenerated.has(key)) {
             console.log(`[Cron:StoryGen] ${sub.pair} — skipped: already generated today`)
-            results.push({ user_id: sub.user_id, pair: sub.pair, status: 'skipped', reason: 'already_today' })
+            results.push({ status: 'skipped' })
             continue
         }
 
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
             if (lastEp) {
                 const hoursSince = (now.getTime() - new Date(lastEp.created_at).getTime()) / (1000 * 60 * 60)
 
-                // Check if a scenario was recently resolved (important event = always generate)
+                // Check if a scenario was recently resolved
                 const { count: recentResolvedCount } = await client
                     .from('story_scenarios')
                     .select('id', { count: 'exact', head: true })
@@ -112,8 +113,8 @@ export async function GET(req: NextRequest) {
                 if (hasRecentResolution) {
                     console.log(`[Cron:StoryGen] ${sub.pair} — generating: scenario resolved since last episode`)
                 } else if (hoursSince < MIN_HOURS_BETWEEN_EPISODES) {
-                    console.log(`[Cron:StoryGen] ${sub.pair} — skipped: last episode ${hoursSince.toFixed(1)}h ago (min: ${MIN_HOURS_BETWEEN_EPISODES}h)`)
-                    results.push({ user_id: sub.user_id, pair: sub.pair, status: 'skipped', reason: `too_recent_${hoursSince.toFixed(0)}h` })
+                    console.log(`[Cron:StoryGen] ${sub.pair} — skipped: last episode ${hoursSince.toFixed(1)}h ago`)
+                    results.push({ status: 'skipped' })
                     continue
                 } else {
                     // Check price movement vs ATR
@@ -126,13 +127,12 @@ export async function GET(req: NextRequest) {
                         if (prices?.[0]) {
                             const currentPrice = (parseFloat(prices[0].asks[0].price) + parseFloat(prices[0].bids[0].price)) / 2
                             const priceMoveAbs = Math.abs(currentPrice - lastEntry)
-                            // Rough ATR estimate from the pair (use 50 pips as default if unavailable)
-                            const approxAtrPips = 0.005 // ~50 pips for major pairs
+                            const approxAtrPips = 0.005 
                             const moveRatio = priceMoveAbs / approxAtrPips
 
                             if (moveRatio < MIN_ATR_MOVE_RATIO) {
-                                console.log(`[Cron:StoryGen] ${sub.pair} — skipped: price moved ${(priceMoveAbs * 10000).toFixed(1)} pips (< 30% ATR), market quiet`)
-                                results.push({ user_id: sub.user_id, pair: sub.pair, status: 'skipped', reason: 'low_movement' })
+                                console.log(`[Cron:StoryGen] ${sub.pair} — skipped: price moved ${(priceMoveAbs * 10000).toFixed(1)} pips (< 30% ATR)`)
+                                results.push({ status: 'skipped' })
                                 continue
                             }
                         }
@@ -140,40 +140,25 @@ export async function GET(req: NextRequest) {
                 }
             }
         } catch {
-            // If checks fail, generate anyway (first episode or DB issue)
+            // Generate anyway
         }
 
-        // ── Generate episode ──
-        console.log(`[Cron:StoryGen] ${sub.pair} — generating new episode`)
+        // ── Generate episode (Background) ──
         try {
-            const taskId = await createTask(
-                sub.user_id,
-                'story_generation',
-                { pair: sub.pair, source: 'cron' },
-                client
-            )
-
-            await generateStory(sub.user_id, sub.pair, taskId, { useServiceRole: true, generationSource: 'cron' })
-            results.push({ user_id: sub.user_id, pair: sub.pair, status: 'generated' })
+            const taskId = await createTask(sub.user_id, 'story_generation', { pair: sub.pair, source: 'cron' }, client)
+            taskIds.push(taskId)
+            generateStory(sub.user_id, sub.pair, taskId, { useServiceRole: true, generationSource: 'cron' }).catch(err => {
+                console.error(`[Cron:StoryGen] Background fail for ${sub.pair}:`, err instanceof Error ? err.message : err)
+            })
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unknown error'
-            console.error(`[Cron:StoryGen] ${sub.pair} — FAILED:`, message)
-            results.push({ user_id: sub.user_id, pair: sub.pair, status: 'failed', error: message })
+            console.error(`[Cron:StoryGen] Task fail for ${sub.pair}:`, error instanceof Error ? error.message : error)
         }
     }
 
-    const processed = results.filter(r => r.status === 'generated').length
-    const skipped = results.filter(r => r.status === 'skipped').length
-    const failed = results.filter(r => r.status === 'failed').length
-
-    console.log(`[Cron:StoryGen] Done — ${processed} generated, ${skipped} skipped, ${failed} failed`)
-
     return NextResponse.json({
-        message: `Story cron complete`,
-        processed,
-        skipped,
-        failed,
-        total: subscriptions.length,
-        details: results,
+        message: `Story cron triggered in background`,
+        triggered: taskIds.length,
+        skipped: results.filter(r => r.status === 'skipped').length,
+        taskIds,
     })
 }

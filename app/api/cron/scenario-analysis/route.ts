@@ -68,9 +68,11 @@ export async function GET(req: NextRequest) {
 
     const results: Array<{ user_id: string; pair: string; status: string; error?: string }> = []
 
-    // Process sequentially to respect OANDA rate limits + AI API rate limits
+    const taskIds: string[] = []
+    
+    // Trigger in parallel (or sequential background) to avoid timing out the cron trigger
     for (const sub of subscriptions) {
-        console.log(`[Cron:ScenarioAnalysis] ── Generating for ${sub.pair} (user: ${sub.user_id.slice(0, 8)}...)`)
+        console.log(`[Cron:ScenarioAnalysis] ── Triggering background analysis for ${sub.pair} (user: ${sub.user_id.slice(0, 8)}...)`)
 
         try {
             const taskId = await createTask(
@@ -79,29 +81,21 @@ export async function GET(req: NextRequest) {
                 { pair: sub.pair, source: 'cron' },
                 client
             )
+            taskIds.push(taskId)
 
-            await generateScenarioAnalysis(sub.user_id, sub.pair, taskId, { useServiceRole: true })
-            results.push({ user_id: sub.user_id, pair: sub.pair, status: 'generated' })
-            console.log(`[Cron:ScenarioAnalysis] ✓ ${sub.pair} completed`)
+            // Fire-and-forget: start the long process but don't AWAIT it here
+            generateScenarioAnalysis(sub.user_id, sub.pair, taskId, { useServiceRole: true }).catch(err => {
+                const msg = err instanceof Error ? err.message : 'Unknown error'
+                console.error(`[Cron:ScenarioAnalysis] Background process FAILED for ${sub.pair}:`, msg)
+            })
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unknown error'
-            console.error(`[Cron:ScenarioAnalysis] ✗ ${sub.pair} failed:`, message)
-            results.push({ user_id: sub.user_id, pair: sub.pair, status: 'failed', error: message })
+            console.error(`[Cron:ScenarioAnalysis] Failed to create task for ${sub.pair}:`, error instanceof Error ? error.message : error)
         }
-
-        // Delay between pairs to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 1000))
     }
 
-    const processed = results.filter(r => r.status === 'generated').length
-    const failed = results.filter(r => r.status === 'failed').length
-
-    console.log(`[Cron:ScenarioAnalysis] Done — ${processed} generated, ${failed} failed out of ${subscriptions.length}`)
-
     return NextResponse.json({
-        message: 'Weekly scenario analysis cron complete',
-        processed,
-        failed,
-        total: subscriptions.length,
+        message: 'Weekly scenario analysis triggered in background',
+        count: taskIds.length,
+        taskIds,
     })
 }
