@@ -46,6 +46,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         { label: 'Dashboard', href: '/', icon: LayoutDashboard },
         { label: 'Calendar', href: '/calendar', icon: Calendar },
         { label: 'Story', href: '/story', icon: ScrollText },
+        { label: 'Scenarios', href: '/scenario-analysis', icon: Target },
         { label: 'Market News', href: '/news', icon: Newspaper },
         { label: 'Trade', href: '/trade', icon: Zap },
         { label: 'Journal', href: '/journal', icon: BookOpen },
@@ -53,6 +54,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
         { label: 'Analytics', href: '/pnl', icon: TrendingUp },
         { label: 'Risk Rules', href: '/risk-rules', icon: ShieldAlert },
         { label: 'Execution Log', href: '/execution-log', icon: History },
+        { label: 'AI Usage', href: '/ai-usage', icon: Layers },
         { label: 'References', href: '/references', icon: BookMarked },
         { label: 'Settings', href: '/settings', icon: Settings },
     ]

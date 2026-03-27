@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { logAIUsage } from '../usage-logger'
 
 let _client: Anthropic | null = null
 function getClient() {
@@ -8,12 +9,18 @@ function getClient() {
     return _client
 }
 
+export interface UsageContext {
+    userId: string
+    feature: string
+}
+
 interface ClaudeOptions {
     system?: string
     timeout?: number
     maxTokens?: number
     noFallback?: boolean
     model?: string
+    usage?: UsageContext
 }
 
 /**
@@ -30,6 +37,7 @@ export async function callClaude(
         timeout = 60_000,
         maxTokens = 4096,
         model = 'claude-opus-4-6',
+        usage,
     } = options
 
     const promptPreview = prompt.slice(0, 80).replace(/\n/g, ' ')
@@ -55,12 +63,41 @@ export async function callClaude(
         if (block.type === 'text') {
             const tokens = message.usage
             console.log(`[AI] CLAUDE DONE | ${elapsed}ms | input=${tokens?.input_tokens ?? '?'} output=${tokens?.output_tokens ?? '?'} tokens | ${block.text.length} chars`)
+
+            if (usage) {
+                logAIUsage({
+                    userId: usage.userId,
+                    provider: 'anthropic',
+                    model,
+                    feature: usage.feature,
+                    inputTokens: tokens?.input_tokens ?? 0,
+                    outputTokens: tokens?.output_tokens ?? 0,
+                    durationMs: elapsed,
+                    success: true,
+                })
+            }
+
             return block.text
         }
         throw new Error(`Unexpected response block type: ${block.type}`)
     } catch (error) {
         const elapsed = Date.now() - start
         console.error(`[AI] CLAUDE FAILED | ${elapsed}ms | ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+        if (usage) {
+            logAIUsage({
+                userId: usage.userId,
+                provider: 'anthropic',
+                model,
+                feature: usage.feature,
+                inputTokens: 0,
+                outputTokens: 0,
+                durationMs: elapsed,
+                success: false,
+                errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            })
+        }
+
         throw error
     } finally {
         clearTimeout(timer)
@@ -71,6 +108,7 @@ interface CachedClaudeOptions {
     timeout?: number
     maxTokens?: number
     model?: string
+    usage?: UsageContext
 }
 
 /**
@@ -89,6 +127,7 @@ export async function callClaudeWithCaching(
         timeout = 90_000,
         maxTokens = 8192,
         model = 'claude-opus-4-6',
+        usage,
     } = options
 
     console.log(`[AI] CLAUDE CACHED | model=${model} | maxTokens=${maxTokens} | prefix=${cacheablePrefix.length} chars | dynamic=${dynamicPrompt.length} chars`)
@@ -129,12 +168,43 @@ export async function callClaudeWithCaching(
             const cacheRead = (tokens as unknown as Record<string, unknown>)?.cache_read_input_tokens ?? 0
             const cacheCreation = (tokens as unknown as Record<string, unknown>)?.cache_creation_input_tokens ?? 0
             console.log(`[AI] CLAUDE CACHED DONE | ${elapsed}ms | input=${tokens?.input_tokens ?? '?'} output=${tokens?.output_tokens ?? '?'} | cache_read=${cacheRead} cache_creation=${cacheCreation} | ${block.text.length} chars`)
+
+            if (usage) {
+                logAIUsage({
+                    userId: usage.userId,
+                    provider: 'anthropic',
+                    model,
+                    feature: usage.feature,
+                    inputTokens: tokens?.input_tokens ?? 0,
+                    outputTokens: tokens?.output_tokens ?? 0,
+                    cacheReadTokens: cacheRead as number,
+                    cacheCreationTokens: cacheCreation as number,
+                    durationMs: elapsed,
+                    success: true,
+                })
+            }
+
             return block.text
         }
         throw new Error(`Unexpected response block type: ${block.type}`)
     } catch (error) {
         const elapsed = Date.now() - start
         console.error(`[AI] CLAUDE CACHED FAILED | ${elapsed}ms | ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+        if (usage) {
+            logAIUsage({
+                userId: usage.userId,
+                provider: 'anthropic',
+                model,
+                feature: usage.feature,
+                inputTokens: 0,
+                outputTokens: 0,
+                durationMs: elapsed,
+                success: false,
+                errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            })
+        }
+
         throw error
     } finally {
         clearTimeout(timer)

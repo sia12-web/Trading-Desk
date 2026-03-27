@@ -9,7 +9,7 @@ import { buildStoryStructuralPrompt } from './prompts/gemini-structural'
 import { buildStoryQuantPrompt } from './prompts/deepseek-quant'
 import { buildStoryNarratorPromptCached } from './prompts/claude-narrator'
 import { getBible, upsertBible } from './bible'
-import { getSeasonNumber, checkAndCloseSeason } from './seasons'
+import { getSeasonNumber, checkAndCloseSeason, getSeasonArchive, shouldForceSeasonFinale } from './seasons'
 import { getAgentReportsForPair } from './agents/data'
 import {
     createEpisode,
@@ -19,7 +19,10 @@ import {
     getScenariosForEpisode,
     getRecentlyResolvedScenarios,
 } from '@/lib/data/stories'
-import { validateStoryLevels, parseFlaggedLevels } from './validators'
+import { validateStoryLevels, validateScenarioLevels, parseFlaggedLevels } from './validators'
+import { getLatestScenarioAnalysisForPrompt } from '@/lib/scenario-analysis/context'
+import { getLatestScenarioAnalysis } from '@/lib/data/scenario-analyses'
+import type { MarketContext } from '@/lib/scenario-analysis/types'
 import { notifyUser } from '@/lib/notifications/notifier'
 import type { StoryResult } from './types'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -58,11 +61,19 @@ export async function generateStory(
         // ── Step 3: Load continuity context (Bible + last episode + resolved scenarios) ──
         await updateProgress(taskId, 25, 'Loading story history...', client)
 
-        const [bible, lastEpisodeRaw, resolvedScenarios] = await Promise.all([
+        const [bible, lastEpisodeRaw, resolvedScenarios, seasonArchive, scenarioAnalysisContext, scenarioAnalysisRaw] = await Promise.all([
             getBible(userId, pair, client),
             getLatestEpisode(userId, pair, client),
             getRecentlyResolvedScenarios(userId, pair, 10, client),
+            getSeasonArchive(userId, pair, client),
+            getLatestScenarioAnalysisForPrompt(userId, pair, client),
+            getLatestScenarioAnalysis(userId, pair, client),
         ])
+
+        // Extract validated key levels for DeepSeek cross-referencing
+        const scenarioAnalysisLevels = scenarioAnalysisRaw
+            ? ((scenarioAnalysisRaw.market_context as MarketContext)?.key_levels || [])
+            : null
 
         // Build last episode with full narrative + scenarios
         let lastEpisode: {
@@ -100,7 +111,7 @@ export async function generateStory(
 
         // ── Step 5: DeepSeek quantitative validation ──
         await updateProgress(taskId, 55, 'DeepSeek validating with quantitative analysis...', client)
-        const deepseekPrompt = buildStoryQuantPrompt(data, geminiOutput)
+        const deepseekPrompt = buildStoryQuantPrompt(data, geminiOutput, scenarioAnalysisLevels)
         const deepseekOutput = await callDeepSeek(deepseekPrompt, {
             timeout: 90_000,
             maxTokens: 4096,
@@ -114,6 +125,18 @@ export async function generateStory(
 
         // ── Step 6: Claude narration (with Bible + resolved scenarios + prompt caching) ──
         await updateProgress(taskId, 75, 'Claude crafting the story narrative...', client)
+        // Check if AI should be nudged to end the season (safety cap)
+        const currentSeasonNumber = lastEpisodeRaw?.season_number || 1
+        const currentSeasonIsFinale = lastEpisodeRaw?.is_season_finale || false
+        const episodeNumber = await getNextEpisodeNumber(userId, pair, client)
+        const nextSeasonNumber = getSeasonNumber(currentSeasonNumber, currentSeasonIsFinale)
+
+        // Count episodes in the current season for safety cap
+        const episodesInCurrentSeason = lastEpisodeRaw
+            ? (lastEpisodeRaw.season_number === nextSeasonNumber ? episodeNumber - 1 : 0)
+            : 0
+        const forceFinale = shouldForceSeasonFinale(episodesInCurrentSeason + 1)
+
         const { cacheablePrefix, dynamicPrompt } = buildStoryNarratorPromptCached(
             data,
             geminiOutput,
@@ -123,7 +146,10 @@ export async function generateStory(
             bible,
             resolvedScenarios,
             agentIntelligence,
-            flaggedLevels
+            flaggedLevels,
+            seasonArchive,
+            forceFinale,
+            scenarioAnalysisContext
         )
         const claudeOutput = await callClaudeWithCaching(cacheablePrefix, dynamicPrompt, {
             timeout: 90_000,
@@ -131,10 +157,41 @@ export async function generateStory(
         })
 
         // ── Step 7: Parse and store ──
-        await updateProgress(taskId, 90, 'Saving story episode...', client)
-        const result = parseAIJson<StoryResult>(claudeOutput)
+        await updateProgress(taskId, 85, 'Validating AI output...', client)
+        let result = parseAIJson<StoryResult>(claudeOutput)
 
-        // ── Step 7a: Validate price levels (warnings only) ──
+        // ── Step 7a: Hard validation — scenario levels ──
+        const scenarioValidation = validateScenarioLevels(result, data.currentPrice, data.atr14)
+        if (!scenarioValidation.valid) {
+            console.warn(`[Story] ${pair} scenario validation failed:`, scenarioValidation.errors)
+
+            // Retry Claude once with correction context
+            await updateProgress(taskId, 88, 'Correcting scenario levels (retry)...', client)
+            const correctionPrompt = `${dynamicPrompt}
+
+⚠️ CORRECTION REQUIRED — your previous response had these errors:
+${scenarioValidation.errors.map(e => `- ${e}`).join('\n')}
+
+Fix these issues and regenerate the COMPLETE JSON response. Remember:
+- Bullish scenarios: trigger_direction="above", invalidation_direction="below"
+- Bearish scenarios: trigger_direction="below", invalidation_direction="above"
+- All levels must be within 3x ATR (${(data.atr14 * 3).toFixed(1)} pips) of current price ${data.currentPrice.toFixed(5)}`
+
+            try {
+                const retryOutput = await callClaudeWithCaching(cacheablePrefix, correctionPrompt, {
+                    timeout: 90_000,
+                    maxTokens: 8192,
+                })
+                result = parseAIJson<StoryResult>(retryOutput)
+                console.log(`[Story] ${pair} retry succeeded after scenario validation failure`)
+            } catch (retryErr) {
+                console.warn(`[Story] ${pair} retry failed, using original result:`, retryErr instanceof Error ? retryErr.message : retryErr)
+            }
+        }
+
+        await updateProgress(taskId, 90, 'Saving story episode...', client)
+
+        // ── Step 7b: Validate price levels (warnings only) ──
         const levelWarnings = validateStoryLevels(result, data)
         if (levelWarnings.length > 0) {
             console.warn(`[Story] ${pair} price level warnings (${levelWarnings.length}):`,
@@ -147,10 +204,8 @@ export async function generateStory(
         if (agentIntelligence.news) agentReportsSnapshot.news = { summary: agentIntelligence.news.summary, sentiment: agentIntelligence.news.sentiment_indicators?.overall }
         if (agentIntelligence.crossMarket) agentReportsSnapshot.crossMarket = { summary: agentIntelligence.crossMarket.summary, risk_appetite: agentIntelligence.crossMarket.risk_appetite }
 
-        const episodeNumber = await getNextEpisodeNumber(userId, pair, client)
-        const seasonNumber = lastEpisodeRaw?.is_season_finale 
-            ? (lastEpisodeRaw.season_number || 1) + 1 
-            : (lastEpisodeRaw?.season_number || 1)
+        // Season number already computed above before narrator call
+        const seasonNumber = nextSeasonNumber
 
         const episode = await createEpisode(userId, pair, {
             episode_number: episodeNumber,
@@ -168,7 +223,7 @@ export async function generateStory(
             next_episode_preview: result.next_episode_preview,
             agent_reports: Object.keys(agentReportsSnapshot).length > 0 ? agentReportsSnapshot : undefined,
             generation_source: options?.generationSource || 'manual',
-            is_season_finale: result.is_season_finale,
+            is_season_finale: result.is_season_finale || forceFinale,
         }, client)
 
         // Create scenarios linked to this episode
@@ -198,11 +253,13 @@ export async function generateStory(
             await upsertBible(userId, pair, result.bible_update, episodeNumber, client)
         }
 
-        // ── Step 7c: Check season finale ──
+        // ── Step 7c: Check season finale (AI-driven or safety cap forced) ──
+        const isFinale = result.is_season_finale || forceFinale
         await checkAndCloseSeason(
-            userId, pair, episodeNumber,
+            userId, pair, episodeNumber, seasonNumber,
             result.bible_update?.arc_summary || '',
-            result.is_season_finale,
+            isFinale,
+            episodesInCurrentSeason + 1,
             client
         )
 

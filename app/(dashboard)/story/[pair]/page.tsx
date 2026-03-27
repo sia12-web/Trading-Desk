@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Loader2, Target, ScrollText } from 'lucide-react'
 import Link from 'next/link'
 import { AMDPhaseBadge } from '../_components/AMDPhaseBadge'
@@ -50,8 +50,10 @@ interface EpisodeListItem {
 export default function PairStoryPage() {
     const params = useParams()
     const router = useRouter()
+    const searchParams = useSearchParams()
     const rawPair = params.pair as string
     const pair = decodeURIComponent(rawPair).replace('_', '/')
+    const autoGenerate = searchParams.get('autoGenerate') === 'true'
 
     const [episode, setEpisode] = useState<Episode | null>(null)
     const [scenarios, setScenarios] = useState<Scenario[]>([])
@@ -157,7 +159,7 @@ export default function PairStoryPage() {
                         )}
                     </div>
                 </div>
-                <GenerateStoryButton pair={pair} onComplete={handleGenerateComplete} />
+                <GenerateStoryButton pair={pair} episodeCount={episodes.length} onComplete={handleGenerateComplete} autoGenerate={autoGenerate} />
             </div>
 
             {episode ? (
@@ -317,11 +319,11 @@ export default function PairStoryPage() {
                 </div>
             ) : (
                 /* Empty state — no episodes yet */
-                <div className="text-center py-20 border border-dashed border-neutral-800 rounded-2xl">
-                    <h2 className="text-lg font-bold text-neutral-400 mb-2">No story yet for {pair}</h2>
-                    <p className="text-sm text-neutral-600 mb-6 max-w-md mx-auto">
-                        Click &quot;Write Next Episode&quot; to generate the first episode of this pair&apos;s story.
-                        The AI will analyze 5 timeframes, news, and create a narrative.
+                <div className="text-center py-20 border border-dashed border-blue-500/20 rounded-2xl bg-blue-500/5">
+                    <h2 className="text-lg font-bold text-neutral-300 mb-2">Ready to begin {pair}&apos;s story</h2>
+                    <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
+                        Click &quot;Begin the Story&quot; to create Season 1, Episode 1.
+                        The AI will analyze 5 timeframes, news, and craft the opening chapter.
                     </p>
                 </div>
             )}

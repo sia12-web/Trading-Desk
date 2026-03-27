@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { ScrollText, Plus, Loader2 } from 'lucide-react'
 import { PairCard } from './_components/PairCard'
 import { PairSelector } from './_components/PairSelector'
@@ -22,6 +23,7 @@ interface PairInfo {
 }
 
 export default function StoryPage() {
+    const router = useRouter()
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
     const [pairInfos, setPairInfos] = useState<PairInfo[]>([])
     const [loading, setLoading] = useState(true)
@@ -74,7 +76,8 @@ export default function StoryPage() {
                 body: JSON.stringify({ pair }),
             })
             setShowSelector(false)
-            loadData()
+            // Navigate to pair detail page with auto-generate flag
+            router.push(`/story/${encodeURIComponent(pair.replace('/', '_'))}?autoGenerate=true`)
         } catch (err) {
             console.error('Failed to subscribe:', err)
         }

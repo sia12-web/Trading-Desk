@@ -166,9 +166,16 @@ export default function SettingsPage() {
             alert('⚠️ Please enter a Telegram Chat ID first.')
             return
         }
-        
+
         setTestingTelegram(true)
         try {
+            // Save the chat ID first so it persists
+            await fetch('/api/notifications/preferences', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegram_chat_id: telegramChatId })
+            })
+
             const res = await fetch('/api/notifications/telegram/test', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -570,10 +577,11 @@ export default function SettingsPage() {
                                 </label>
                                 <div className="flex gap-3">
                                     <input
-                                        type="text"
+                                        type="password"
                                         value={telegramChatId}
                                         onChange={(e) => setTelegramChatId(e.target.value)}
-                                        placeholder="e.g. 123456789"
+                                        placeholder="Enter your Chat ID"
+                                        autoComplete="off"
                                         className="flex-1 px-5 py-4 bg-neutral-800 border border-neutral-700 rounded-2xl text-white font-mono text-sm focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all"
                                     />
                                     <button

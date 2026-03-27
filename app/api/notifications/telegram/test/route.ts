@@ -12,10 +12,10 @@ export async function POST(req: Request) {
 
     try {
         const bodyValue = await req.json().catch(() => ({}))
-        const chatId = bodyValue.chatId || process.env.TELEGRAM_CHAT_ID
+        const chatId = bodyValue.chatId
 
         if (!chatId) {
-            return NextResponse.json({ error: 'No chat ID provided in request or environment' }, { status: 400 })
+            return NextResponse.json({ error: 'Please enter a Telegram Chat ID first' }, { status: 400 })
         }
 
         const result = await sendTelegramMessage(

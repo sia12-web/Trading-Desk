@@ -6,7 +6,8 @@ import type { StoryDataPayload } from '../types'
  */
 export function buildStoryQuantPrompt(
     data: StoryDataPayload,
-    geminiOutput: string
+    geminiOutput: string,
+    scenarioAnalysisLevels?: Array<{ price: number; type: string; timeframe: string; significance: string }> | null
 ): string {
     // Extract indicator data for quant analysis
     const indicatorSummary = data.timeframes.map(tf => {
@@ -62,7 +63,10 @@ ${rsiByTF.map(r => `${r.tf}: RSI=${r.rsi.toFixed(1)}, MACD Hist=${r.macdHist.toF
 ## AMD ALGORITHMIC ASSESSMENT
 ${Object.entries(data.amdPhases).map(([tf, p]) => `${tf}: ${p.phase} (${p.confidence}%)`).join('\n')}
 
-## YOUR TASK
+${scenarioAnalysisLevels && scenarioAnalysisLevels.length > 0 ? `## PRE-VALIDATED LEVELS (from Scenario Analysis)
+The following levels were validated in a recent institutional scenario analysis. Use them as REFERENCE anchors when validating Gemini's levels — if Gemini cites a level that is close to one of these, it is more likely legitimate.
+${scenarioAnalysisLevels.map(l => `- ${l.price.toFixed(5)} (${l.type}, ${l.timeframe}): ${l.significance}`).join('\n')}
+` : ''}## YOUR TASK
 Validate Gemini's analysis statistically and provide precise trading levels.
 
 Respond with JSON:

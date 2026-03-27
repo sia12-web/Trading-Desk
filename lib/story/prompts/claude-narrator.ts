@@ -25,11 +25,19 @@ interface ResolvedScenario {
     resolved_at: string | null
 }
 
+interface SeasonSummary {
+    season_number: number
+    summary: string | null
+    episode_count: number
+    key_events: unknown[]
+    performance_notes: string | null
+}
+
 /**
  * Claude "Story Narrator" prompt — the Decision Architect for the Story feature.
  * Synthesizes Gemini structural + DeepSeek quant into a compelling narrative.
  *
- * V2: Uses Story Bible for long-term memory + resolved scenarios for continuity.
+ * V3: AI-driven seasons, season archive for deep memory, trade-episode linkage.
  */
 export function buildStoryNarratorPrompt(
     data: StoryDataPayload,
@@ -40,8 +48,26 @@ export function buildStoryNarratorPrompt(
     bible: StoryBible | null,
     resolvedScenarios: ResolvedScenario[],
     agentIntelligence?: AgentIntelligence,
-    flaggedLevels?: Array<{ level: number; source: string; reason: string }>
+    flaggedLevels?: Array<{ level: number; source: string; reason: string }>,
+    seasonArchive?: SeasonSummary[],
+    forceSeasonFinale?: boolean,
+    latestScenarioAnalysis?: string | null
 ): string {
+    // ── Season Archive block (deep cross-season memory) ──
+    const archiveBlock = seasonArchive && seasonArchive.length > 0
+        ? `## SEASON ARCHIVE (Deep History)
+
+You have completed ${seasonArchive.length} season(s) of this pair's story. Here is what happened in each:
+
+${seasonArchive.map(s =>
+    `### Season ${s.season_number} (${s.episode_count} episodes)
+${s.summary || 'No summary recorded.'}
+${s.performance_notes ? `Trader Performance: ${s.performance_notes}` : ''}`
+).join('\n\n')}
+
+Use this archive to maintain long-term continuity. Reference past seasons when relevant — callbacks to previous events make the story richer.`
+        : ''
+
     // ── Story Bible block ──
     const bibleBlock = bible
         ? `## STORY BIBLE (Full Arc Memory)
@@ -104,17 +130,30 @@ ${resolvedScenarios.map(s =>
     // ── Intelligence briefing block ──
     const intelligenceBlock = buildIntelligenceBriefing(agentIntelligence)
 
+    // ── Scenario Analysis context block ──
+    const scenarioAnalysisBlock = latestScenarioAnalysis || ''
+
     const currentEpisodeNumber = (lastEpisode?.episode_number || 0) + 1
 
-    // ── Trades block ──
+    // ── Trades block (with season/episode linkage) ──
     const trades = data.recent_trades || []
     const tradesBlock = trades.length > 0
-        ? `## RECENT TRADES (OANDA Journal)
-The trader has been active in this pair since the last episode:
-${trades.map(t => `- **${t.direction.toUpperCase()}** at ${t.entry_price} (${t.status}) — SL: ${t.stop_loss || 'None'}, TP: ${t.take_profit || 'None'}${t.closed_at ? `. CLOSED at ${t.exit_price}` : '. POSITION ACTIVE.'}`).join('\n')}
+        ? `## RECENT TRADES (OANDA Journal — with Story Context)
+The trader has been active in this pair:
+${trades.map(t => {
+    const episodeRef = t.story_season_number && t.episode_number
+        ? ` (opened in S${t.story_season_number}E${t.episode_number}${t.episode_title ? ` "${t.episode_title}"` : ''})`
+        : ''
+    return `- **${t.direction.toUpperCase()}** at ${t.entry_price} (${t.status})${episodeRef} — SL: ${t.stop_loss || 'None'}, TP: ${t.take_profit || 'None'}${t.closed_at ? `. CLOSED at ${t.exit_price}` : '. POSITION ACTIVE.'}`
+}).join('\n')}
 
-**TASK**: Reference these trades in your story. How do they fit the scenarios? Did we execute the buyer/seller plan correctly? If the trader is deep in a position, the narrative tension should reflect that.`
-        : 'No recent trades recorded for this pair since the last episode.'
+**TASK**: Reference these trades in your story. If a trade has season/episode context, acknowledge WHEN in the story it was opened. Did the trader follow the scenario? Was the position successful? Active positions create narrative tension.`
+        : 'No recent trades recorded for this pair.'
+
+    // ── Force finale nudge ──
+    const forceFinaleBlock = forceSeasonFinale
+        ? `\n\n⚠️ SEASON FINALE REQUIRED: This season has reached the maximum episode limit. You MUST set is_season_finale to true and write this as a season-ending episode. Tie up loose threads and provide a comprehensive season summary.`
+        : ''
 
     return `You are the Story Narrator — a master storyteller AND economist who turns forex market data into compelling narratives enriched with fundamental intelligence.
 
@@ -128,6 +167,8 @@ Think of ${data.pair} as a TV show you've been following. The buyers and sellers
 - **Smart Money** = the institutional players. They manipulate price to grab liquidity before making their real move.
 - **AMD Cycle** = the rhythm of the show: Accumulation (quiet buildup) → Manipulation (fake move/stop hunt) → Distribution (the real directional move)
 
+${archiveBlock}
+
 ${bibleBlock}
 
 ${lastEpisodeBlock}
@@ -135,6 +176,10 @@ ${lastEpisodeBlock}
 ${resolvedBlock}
 
 ${intelligenceBlock}
+
+${scenarioAnalysisBlock}
+
+${tradesBlock}
 
 ## CURRENT DATA (Episode ${currentEpisodeNumber})
 
@@ -229,8 +274,10 @@ Write Episode ${currentEpisodeNumber} of the ${data.pair} story. Respond with th
     "resolved_threads": [
       {"thread": "Thread name", "introduced_episode": 1, "resolved_episode": ${currentEpisodeNumber}, "outcome": "How this thread resolved"}
     ],
-    "dominant_themes": ["Theme 1", "Theme 2"]
-  }
+    "dominant_themes": ["Theme 1", "Theme 2"],
+    "trade_history_summary": "Concise summary of ALL trades the user has taken on this pair across all seasons — which episodes they entered, exited, won, lost. This is the trader's personal journey within the story."
+  },
+  "is_season_finale": true | false
 }
 
 IMPORTANT RULES:
@@ -241,7 +288,8 @@ IMPORTANT RULES:
 - Reference AMD phases naturally in the narrative
 - If previous episodes exist, maintain continuity (reference what happened before)
 - If scenarios were recently resolved, acknowledge the outcomes in your narrative
-- The story should help the trader UNDERSTAND the market, not just give signals
+- If season archive exists, reference past seasons when relevant (callbacks enrich the story)
+- The story should help the trader UNDERSTAND the market, not just give signals${forceFinaleBlock}
 
 ANTI-HALLUCINATION RULES (MANDATORY):
 - Every price level you cite MUST come from Gemini's structural analysis or DeepSeek's quantitative validation. NEVER invent levels.
@@ -250,12 +298,14 @@ ANTI-HALLUCINATION RULES (MANDATORY):
 - All price levels must be within 3x ATR of the current price (${data.currentPrice.toFixed(5)}, ATR14: ${data.atr14.toFixed(1)} pips). Levels beyond this range are almost certainly fabricated.
 - scenario trigger_level and invalidation_level must come from key_levels or Gemini/DeepSeek analysis, never invented.
 
-STRUCTURED LEVEL RULES (for scenario monitoring bot):
+SCENARIO LEVEL RULES (STRICT — for monitoring bot):
 - Each scenario MUST include trigger_level (number) + trigger_direction ("above" or "below")
 - Each scenario MUST include invalidation_level (number) + invalidation_direction ("above" or "below")
 - trigger_level is the KEY price that confirms the scenario (e.g., a breakout above resistance)
 - invalidation_level is the KEY price that kills the scenario (e.g., a break below support)
-- Trigger and invalidation must be on OPPOSITE sides of the current price (${data.currentPrice.toFixed(5)})
+- For a BULLISH scenario: trigger_direction MUST be "above" and invalidation_direction MUST be "below"
+- For a BEARISH scenario: trigger_direction MUST be "below" and invalidation_direction MUST be "above"
+- Trigger and invalidation levels must be on OPPOSITE sides of the current price (${data.currentPrice.toFixed(5)})
 - These levels must come from key_levels or the Gemini/DeepSeek analysis — never invented
 
 INTELLIGENCE INTEGRATION RULES:
@@ -267,15 +317,36 @@ INTELLIGENCE INTEGRATION RULES:
 - If cross-market divergences exist, they become narrative tension points
 - DO NOT just list intelligence data — WEAVE it into the story naturally
 
+SCENARIO ANALYSIS INTEGRATION RULES (CRITICAL FOR ACCURACY):
+If a "SCENARIO ANALYSIS CONTEXT" section is present above, it contains a pre-computed institutional-grade weekly report for this pair. You MUST deeply integrate it:
+- **Align your scenarios**: Your 2 story scenarios should be CONSISTENT with the institutional scenarios. If the Scenario Analysis says the highest-probability scenario is bearish, your primary scenario should reflect that unless your fresh Gemini/DeepSeek data contradicts it — and if it does, you MUST explain the divergence in the narrative.
+- **Use its validated levels**: The key levels, liquidity pools, and watchlist levels in the Scenario Analysis have been validated through a separate tri-model pipeline. PREFER these levels for your trigger_level, invalidation_level, entries, stop_losses, and take_profits. They are pre-validated and grounded.
+- **Incorporate institutional narratives**: The institutional scenarios describe who is trapped and where smart money is targeting. Weave this into your buyer/seller character analysis — e.g., "Sellers are trapped above 1.2350, and smart money is likely targeting the liquidity pool at 1.2280."
+- **Reference impact factors**: USD strength direction, risk sentiment, session dynamics, and correlated pair signals from the Scenario Analysis must inform your narrative. These are the WHY behind the price action.
+- **Use conditional patterns**: If the Scenario Analysis includes historical "IF X THEN Y" patterns, reference the relevant ones when conditions are met or approaching.
+- **Respect the avoid list**: If the Scenario Analysis flags conditions to avoid trading, mention these as risk factors in your narrative.
+- **Convergence/Divergence**: Explicitly state whether your fresh analysis CONVERGES or DIVERGES with the Scenario Analysis. Convergence = higher confidence. Divergence = narrative tension point that the trader must resolve.
+- **NEVER contradict validated levels silently**: If you disagree with a Scenario Analysis level, say so explicitly and explain why based on fresh data.
+
 BIBLE UPDATE RULES:
 - arc_summary: Write the FULL arc from episode 1 to now (replaces previous). This is your 'Previously on...' memory buffer — keep it tight but informative for FUTURE episodes so we don't need to read old narratives.
 - key_events: Include significant plot points. Highlight which scenarios played a role. Cap at 15.
-- trade_history_summary: A concise recap of ANY positions taken since the last episode (or in the previous season), their entry/exit reasons, and how they relate to the scenarios.
+- trade_history_summary: Comprehensive recap of ALL positions taken across all seasons. Include season/episode references when available (e.g., "Opened long in S1E5, closed in S1E8 for +40 pips"). This builds the trader's personal journey within the story.
 - unresolved_threads: All narrative/market threads that are STILL active.
 - resolved_threads: Anything resolved in THIS episode.
 - dominant_themes: The 3-5 main themes of this pair's story.
 
-is_season_finale: Set to true ONLY if the current narrative arc has reached a logical conclusion (e.g., a major level was hit, a trend reversed, or a multi-day scenario completed). Ending a season generates a compact season summary for long-term memory.`
+SEASON FINALE RULES (AI-DRIVEN):
+- Set is_season_finale to true when the current narrative arc has reached a natural conclusion:
+  * A major support/resistance level that defined the season was decisively broken
+  * A multi-week trend reversed direction (e.g., from bullish to bearish)
+  * A fundamental shift occurred (central bank policy change, geopolitical event)
+  * All major unresolved threads from recent episodes have been resolved
+  * The buyer/seller power dynamic fundamentally shifted (e.g., from buyer dominance to seller dominance)
+- Do NOT end a season just because a certain number of episodes passed — end it when the STORY demands it
+- When ending a season, write a satisfying conclusion that ties up threads and sets the stage for the next season
+- Minimum 5 episodes per season (don't end too early)
+- If this is a season finale, the arc_summary in bible_update should serve as the complete season recap`
 }
 
 /**
@@ -292,13 +363,18 @@ export function buildStoryNarratorPromptCached(
     bible: StoryBible | null,
     resolvedScenarios: Parameters<typeof buildStoryNarratorPrompt>[6],
     agentIntelligence?: AgentIntelligence,
-    flaggedLevels?: Array<{ level: number; source: string; reason: string }>
+    flaggedLevels?: Array<{ level: number; source: string; reason: string }>,
+    seasonArchive?: SeasonSummary[],
+    forceSeasonFinale?: boolean,
+    latestScenarioAnalysis?: string | null
 ): { cacheablePrefix: string; dynamicPrompt: string } {
     // Get the full prompt and split it
     const fullPrompt = buildStoryNarratorPrompt(
         data, geminiOutput, deepseekOutput, news,
         lastEpisode, bible, resolvedScenarios,
-        agentIntelligence, flaggedLevels
+        agentIntelligence, flaggedLevels,
+        seasonArchive, forceSeasonFinale,
+        latestScenarioAnalysis
     )
 
     // Split at "## CURRENT DATA" — everything before is relatively stable (identity + Bible + rules)

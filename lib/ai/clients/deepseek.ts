@@ -1,4 +1,6 @@
 import OpenAI from 'openai'
+import { logAIUsage } from '../usage-logger'
+import type { UsageContext } from './claude'
 
 let _client: OpenAI | null = null
 function getClient() {
@@ -15,6 +17,7 @@ interface DeepSeekOptions {
     timeout?: number
     maxTokens?: number
     model?: string
+    usage?: UsageContext
 }
 
 /**
@@ -29,6 +32,7 @@ export async function callDeepSeek(
         timeout = 90_000,
         maxTokens = 4096,
         model = 'deepseek-chat',
+        usage,
     } = options
 
     const promptPreview = prompt.slice(0, 80).replace(/\n/g, ' ')
@@ -53,12 +57,43 @@ export async function callDeepSeek(
         if (!content) {
             throw new Error('DeepSeek returned empty response')
         }
-        const usage = response.usage
-        console.log(`[AI] DEEPSEEK DONE | ${elapsed}ms | input=${usage?.prompt_tokens ?? '?'} output=${usage?.completion_tokens ?? '?'} tokens | ${content.length} chars`)
+        const tokens = response.usage
+        const inputTokens = tokens?.prompt_tokens ?? 0
+        const outputTokens = tokens?.completion_tokens ?? 0
+        console.log(`[AI] DEEPSEEK DONE | ${elapsed}ms | input=${inputTokens} output=${outputTokens} tokens | ${content.length} chars`)
+
+        if (usage) {
+            logAIUsage({
+                userId: usage.userId,
+                provider: 'deepseek',
+                model,
+                feature: usage.feature,
+                inputTokens,
+                outputTokens,
+                durationMs: elapsed,
+                success: true,
+            })
+        }
+
         return content
     } catch (error) {
         const elapsed = Date.now() - start
         console.error(`[AI] DEEPSEEK FAILED | ${elapsed}ms | ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+        if (usage) {
+            logAIUsage({
+                userId: usage.userId,
+                provider: 'deepseek',
+                model,
+                feature: usage.feature,
+                inputTokens: 0,
+                outputTokens: 0,
+                durationMs: elapsed,
+                success: false,
+                errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            })
+        }
+
         throw error
     } finally {
         clearTimeout(timer)

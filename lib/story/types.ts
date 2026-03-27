@@ -38,6 +38,9 @@ export interface StoryDataPayload {
         stop_loss?: number | null
         take_profit?: number | null
         closed_at?: string | null
+        story_season_number?: number | null
+        episode_number?: number | null
+        episode_title?: string | null
     }>
     collectedAt: string
 }

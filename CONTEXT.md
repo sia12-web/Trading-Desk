@@ -26,6 +26,9 @@ All pages live under `app/(dashboard)/` with shared layout in `DashboardShell.ts
 | `/` | Dashboard | DailyPlanWidget + Market Indices + Account overview |
 | `/story` | Story Hub | Pair subscriptions, episode list, scenario tracking |
 | `/story/[pair]` | Story Detail | Episodes + scenarios for a specific pair |
+| `/scenario-analysis` | Scenario Analysis | Institutional-grade weekly preparation reports |
+| `/scenario-analysis/[id]` | Analysis Detail | Full 5-section scenario analysis report |
+| `/ai-usage` | AI Usage | Token usage, costs, and performance per model |
 | `/trade` | Trade Execution | Manual trade form with OANDA integration |
 | `/positions` | Open Positions | Live OANDA positions + planned trades |
 | `/execution-log` | Execution Log | OANDA API call history |
@@ -86,6 +89,19 @@ All pages live under `app/(dashboard)/` with shared layout in `DashboardShell.ts
 | GET/POST | `/api/story/subscriptions` | List/create pair subscriptions |
 | GET/DELETE | `/api/story/subscriptions/[pair]` | Get/remove pair subscription |
 | GET/PUT | `/api/story/bible` | Get/update story bible |
+
+### Scenario Analysis
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/scenario-analysis/generate` | Trigger analysis generation (background task) |
+| GET | `/api/scenario-analysis` | List analyses for a pair |
+| GET | `/api/scenario-analysis/[id]` | Full analysis detail |
+| GET | `/api/scenario-analysis/latest` | Latest non-expired for a pair |
+
+### AI Usage
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/ai-usage` | Aggregated AI usage stats (per provider, daily costs) |
 
 ### Calendar
 | Method | Endpoint | Purpose |
@@ -168,7 +184,16 @@ All pages live under `app/(dashboard)/` with shared layout in `DashboardShell.ts
 ### Infrastructure
 - **JSON Parsing**: `lib/ai/parse-response.ts` → `parseAIJson<T>()` (uses JSON5)
 - **Rate Limiter**: `lib/ai/rate-limiter.ts` → 5 calls/hour per user (in-memory)
+- **Usage Logger**: `lib/ai/usage-logger.ts` → fire-and-forget DB logging with cost estimation
 - **Model selection is HARDCODED** — no user-selectable tiers
+
+### AI Usage Tracking
+- **Table**: `ai_usage_logs` (provider, model, feature, tokens, cost, duration, success)
+- **Logger**: `lib/ai/usage-logger.ts` → `logAIUsage()` (fire-and-forget, service role client)
+- **Instrumented**: All 3 AI clients accept optional `usage: { userId, feature }` in options
+- **Page**: `/ai-usage` — per-provider cards (Anthropic/Google/DeepSeek), daily cost chart, feature breakdown
+- **API**: `GET /api/ai-usage?days=30` — aggregates logs client-side from raw rows
+- **Cost Estimation**: Approximate pricing per 1M tokens (Claude Opus: $15/$75, Gemini Flash: $0.15/$0.60, DeepSeek: $0.27/$1.10)
 
 ---
 
@@ -214,12 +239,59 @@ The narrative-based forex analysis feature — follow pairs like a TV show.
 
 ### Key Features
 - **Story Bible**: Persistent arc summary per pair (`story_bibles` table), updated each episode
-- **Season System**: 20 episodes per season, auto-archiving via `story_seasons` table
-- **Scenario Monitor**: Cron every 15min checks active scenarios vs OANDA prices
-- **Anti-Hallucination**: DeepSeek outputs `flagged_levels`, Claude forbidden from using them
+- **Season System V2 (AI-Driven)**: AI decides when to end a season (no hardcoded episode cap), safety cap at 50 episodes. `story_seasons` table stores season metadata.
+- **Season Archive Memory**: Past season summaries fed to narrator for deep cross-season recall and callbacks
+- **Trade-Episode Linkage**: `trades.story_episode_id` + `story_season_number` columns — AI references "opened in S1E5" in narrative
+- **Scenario Monitor**: Cron every 15min checks active scenarios vs OANDA prices, auto-resolves + auto-generates next episode
+- **Anti-Hallucination V2**: DeepSeek `flagged_levels`, Claude forbidden from using them, `validateScenarioLevels()` hard gate with retry on direction/range violations
 - **Prompt Caching**: `callClaudeWithCaching()` — ~90% cache discount on narrator prompt
+- **Button UX**: "Begin the Story" (0 episodes) vs "Write Next Episode" (>0), auto-generate S1E1 on pair subscription
 - **Anti-spam**: Max 1 bot-triggered generation per pair per 6 hours
 - **Market hours**: No-op on weekends (Sat + Sun before 10PM UTC + Fri after 10PM UTC)
+
+---
+
+## Scenario Analysis
+
+Institutional-grade weekly preparation reports — standalone analytical feature powered by tri-model AI.
+
+### Core Pipeline
+- **Entry**: `lib/scenario-analysis/pipeline.ts` → `generateScenarioAnalysis(userId, pair, taskId)`
+- **Flow**: Gemini (structural scan) → DeepSeek (probability validation) → Claude (institutional synthesis)
+- **Duration**: ~3-4 min per analysis (background task)
+- **Expiry**: 24 hours per analysis
+
+### Components
+| Module | Path | Purpose |
+|--------|------|---------|
+| Types | `lib/scenario-analysis/types.ts` | TypeScript interfaces for 5 sections |
+| Pipeline | `lib/scenario-analysis/pipeline.ts` | Tri-model orchestration |
+| Context | `lib/scenario-analysis/context.ts` | Cross-feature integration helpers |
+| Data | `lib/data/scenario-analyses.ts` | CRUD operations |
+
+### Prompts
+| Prompt | Path | AI Model |
+|--------|------|----------|
+| Gemini Scanner | `lib/scenario-analysis/prompts/gemini-scanner.ts` | Gemini |
+| DeepSeek Validator | `lib/scenario-analysis/prompts/deepseek-validator.ts` | DeepSeek |
+| Claude Synthesizer | `lib/scenario-analysis/prompts/claude-synthesizer.ts` | Claude |
+
+### 5-Section Report
+1. **Market Context** — structure summary, key levels, liquidity pools, anomalies, bias
+2. **Institutional Scenarios** — 3-5 scenarios with institutional narrative, trigger/invalidation, targets
+3. **Historical Patterns** — weekly behaviors, conditional "if X then Y" patterns
+4. **Impact Factors** — USD strength, risk sentiment, session dynamics, news, correlated pairs
+5. **Actionable Takeaways** — preparation checklist, key levels watchlist, avoid list
+
+### Cross-Feature Integration
+- **Story Narrator**: Pipeline fetches latest non-expired analysis via `getLatestScenarioAnalysisForPrompt()`, injects compact summary + scenario titles into narrator prompt
+- **Context Helper**: `buildScenarioAnalysisContextBlock()` formats analysis for any AI prompt injection
+
+### Reused Infrastructure
+- Data collection: `collectStoryData()` from Story
+- News: `summarizeNewsForStory()` from Story
+- Intelligence: `getAgentReportsForPair()` from Story agents
+- AI clients, JSON parsing, rate limiting, background tasks — all shared
 
 ---
 
@@ -282,6 +354,16 @@ The narrative-based forex analysis feature — follow pairs like a TV show.
 | `story_bibles` | Persistent arc memory per pair |
 | `story_seasons` | Season grouping (20 episodes/season) |
 | `story_agent_reports` | Intelligence reports (optimizer, news, cross-market) |
+
+### Scenario Analysis Tables
+| Table | Purpose |
+|-------|---------|
+| `scenario_analyses` | Institutional-grade reports (5 JSONB sections, 24h expiry, RLS) |
+
+### AI Usage Tables
+| Table | Purpose |
+|-------|---------|
+| `ai_usage_logs` | Per-call token usage, cost estimates, latency, success/failure (RLS) |
 
 ### Coaching & Daily Plan Tables
 | Table | Purpose |
@@ -462,6 +544,7 @@ Centralized in `lib/ai/chart-style.ts` → `CHART_STYLE_PROMPT_BLOCK`. Injected 
 | Execution Logs | `lib/data/execution-logs.ts` | OANDA execution tracking |
 | Risk Rules | `lib/data/risk-rules.ts` | Risk rule CRUD |
 | Screenshots | `lib/data/screenshots.ts` | Screenshot management |
+| Scenario Analyses | `lib/data/scenario-analyses.ts` | Scenario analysis CRUD |
 | Stories | `lib/data/stories.ts` | Story data access |
 | Trades | `lib/data/trades.ts` | Trade journal CRUD |
 | Trader Profile | `lib/data/trader-profile.ts` | Profile management |

@@ -38,17 +38,49 @@ export async function collectStoryData(
     const pipLocation = getPipLocation(pair)
     const supabase = client || await createClient()
 
-    // Fetch current price + trades and candles in parallel
-    const [{ data: prices }, { data: trades }] = await Promise.all([
+    // Fetch current price + trades (with episode linkage) and candles in parallel
+    const [{ data: prices }, { data: tradesRaw }] = await Promise.all([
         getCurrentPrices([instrument]),
         supabase
             .from('trades')
-            .select('direction, status, entry_price, exit_price, stop_loss, take_profit, closed_at')
+            .select('direction, status, entry_price, exit_price, stop_loss, take_profit, closed_at, story_season_number, story_episode_id')
             .eq('user_id', userId)
             .eq('pair', pair)
             .order('created_at', { ascending: false })
             .limit(10) // last 10 activities
     ])
+
+    // Enrich trades with episode numbers for linked trades
+    const linkedEpisodeIds = (tradesRaw || [])
+        .map(t => t.story_episode_id)
+        .filter((id): id is string => id != null)
+
+    let episodeLookup: Record<string, { episode_number: number; title: string }> = {}
+    if (linkedEpisodeIds.length > 0) {
+        const { data: eps } = await supabase
+            .from('story_episodes')
+            .select('id, episode_number, title')
+            .in('id', linkedEpisodeIds)
+        if (eps) {
+            episodeLookup = Object.fromEntries(eps.map(e => [e.id, { episode_number: e.episode_number, title: e.title }]))
+        }
+    }
+
+    const trades = (tradesRaw || []).map(t => {
+        const ep = t.story_episode_id ? episodeLookup[t.story_episode_id] : null
+        return {
+            direction: t.direction,
+            status: t.status,
+            entry_price: t.entry_price,
+            exit_price: t.exit_price,
+            stop_loss: t.stop_loss,
+            take_profit: t.take_profit,
+            closed_at: t.closed_at,
+            story_season_number: t.story_season_number,
+            episode_number: ep?.episode_number ?? null,
+            episode_title: ep?.title ?? null,
+        }
+    })
 
     const currentPrice = prices?.[0]
         ? (parseFloat(prices[0].asks[0].price) + parseFloat(prices[0].bids[0].price)) / 2
@@ -104,7 +136,7 @@ export async function collectStoryData(
         liquidityZones,
         volatilityStatus,
         atr14,
-        recent_trades: trades || [],
+        recent_trades: trades,
         collectedAt: new Date().toISOString(),
     }
 }

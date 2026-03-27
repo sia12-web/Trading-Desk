@@ -1,4 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
+import { logAIUsage } from '../usage-logger'
+import type { UsageContext } from './claude'
 
 let _client: GoogleGenAI | null = null
 function getClient() {
@@ -12,6 +14,7 @@ interface GeminiOptions {
     timeout?: number
     maxTokens?: number
     model?: string
+    usage?: UsageContext
 }
 
 /**
@@ -26,6 +29,7 @@ export async function callGemini(
         timeout = 90_000,
         maxTokens = 8192,
         model = 'gemini-3-flash-preview',
+        usage,
     } = options
 
     const promptPreview = prompt.slice(0, 80).replace(/\n/g, ' ')
@@ -49,11 +53,45 @@ export async function callGemini(
         if (!text) {
             throw new Error('Gemini returned empty response')
         }
-        console.log(`[AI] GEMINI DONE | ${elapsed}ms | ${text.length} chars`)
+
+        // Gemini SDK provides usageMetadata
+        const usageMeta = response.usageMetadata
+        const inputTokens = usageMeta?.promptTokenCount ?? 0
+        const outputTokens = usageMeta?.candidatesTokenCount ?? 0
+        console.log(`[AI] GEMINI DONE | ${elapsed}ms | input=${inputTokens} output=${outputTokens} | ${text.length} chars`)
+
+        if (usage) {
+            logAIUsage({
+                userId: usage.userId,
+                provider: 'google',
+                model,
+                feature: usage.feature,
+                inputTokens,
+                outputTokens,
+                durationMs: elapsed,
+                success: true,
+            })
+        }
+
         return text
     } catch (error) {
         const elapsed = Date.now() - start
         console.error(`[AI] GEMINI FAILED | ${elapsed}ms | ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+        if (usage) {
+            logAIUsage({
+                userId: usage.userId,
+                provider: 'google',
+                model,
+                feature: usage.feature,
+                inputTokens: 0,
+                outputTokens: 0,
+                durationMs: elapsed,
+                success: false,
+                errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            })
+        }
+
         throw error
     } finally {
         clearTimeout(timer)

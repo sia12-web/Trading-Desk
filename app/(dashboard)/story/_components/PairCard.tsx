@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRight, Clapperboard, Trash2 } from 'lucide-react'
+import { ChevronRight, BookOpen, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { AMDPhaseBadge } from './AMDPhaseBadge'
 
@@ -18,10 +18,14 @@ interface PairCardProps {
 }
 
 export function PairCard({ pair, latestEpisode, activeScenarios, onDelete }: PairCardProps) {
+    const pairUrl = latestEpisode
+        ? `/story/${encodeURIComponent(pair.replace('/', '_'))}`
+        : `/story/${encodeURIComponent(pair.replace('/', '_'))}?autoGenerate=true`
+
     return (
         <div className="relative group">
             <Link
-                href={`/story/${encodeURIComponent(pair.replace('/', '_'))}`}
+                href={pairUrl}
                 className="block bg-neutral-900/40 border border-neutral-800/50 hover:border-blue-500/30 rounded-2xl p-5 transition-all hover:bg-neutral-900/60 hover:shadow-2xl hover:shadow-blue-500/5 group/card"
             >
                 <div className="flex items-start justify-between mb-4">
@@ -47,7 +51,7 @@ export function PairCard({ pair, latestEpisode, activeScenarios, onDelete }: Pai
                 {latestEpisode ? (
                     <div className="space-y-4">
                         <p className="text-sm text-neutral-400 line-clamp-2 leading-relaxed h-10 italic">
-                            "{latestEpisode.title}"
+                            &ldquo;{latestEpisode.title}&rdquo;
                         </p>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -64,9 +68,10 @@ export function PairCard({ pair, latestEpisode, activeScenarios, onDelete }: Pai
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-6 border border-dashed border-neutral-800 rounded-xl bg-neutral-950/30 group-hover/card:border-neutral-700 transition-colors">
-                        <Clapperboard size={20} className="text-neutral-700 mb-2 group-hover/card:text-neutral-500 transition-colors" />
-                        <span className="text-[10px] text-neutral-600 font-medium uppercase tracking-tight">No episodes recorded</span>
+                    <div className="flex flex-col items-center justify-center py-6 border border-dashed border-blue-500/20 rounded-xl bg-blue-500/5 group-hover/card:border-blue-500/30 group-hover/card:bg-blue-500/10 transition-colors">
+                        <BookOpen size={20} className="text-blue-400 mb-2" />
+                        <span className="text-xs text-blue-400 font-semibold">Begin the Story</span>
+                        <span className="text-[10px] text-neutral-600 mt-0.5">Click to start Season 1</span>
                     </div>
                 )}
             </Link>

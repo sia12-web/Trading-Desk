@@ -67,6 +67,69 @@ export function validateStoryLevels(
 }
 
 /**
+ * Hard validation for scenario levels — checks that trigger and invalidation
+ * are on the correct sides of the current price based on direction.
+ *
+ * Returns { valid: true } if all checks pass, or { valid: false, errors: [...] }
+ * with specific details about what's wrong so the narrator can be retried.
+ */
+export function validateScenarioLevels(
+    result: StoryResult,
+    currentPrice: number,
+    atr: number
+): { valid: boolean; errors: string[] } {
+    const errors: string[] = []
+
+    for (const s of result.scenarios || []) {
+        // All scenarios must have structured levels
+        if (s.trigger_level == null || s.invalidation_level == null) {
+            errors.push(`Scenario "${s.title}": missing trigger_level or invalidation_level`)
+            continue
+        }
+        if (!s.trigger_direction || !s.invalidation_direction) {
+            errors.push(`Scenario "${s.title}": missing trigger_direction or invalidation_direction`)
+            continue
+        }
+
+        // Direction consistency check
+        if (s.direction === 'bullish') {
+            if (s.trigger_direction !== 'above') {
+                errors.push(`Scenario "${s.title}": bullish scenario must have trigger_direction="above", got "${s.trigger_direction}"`)
+            }
+            if (s.invalidation_direction !== 'below') {
+                errors.push(`Scenario "${s.title}": bullish scenario must have invalidation_direction="below", got "${s.invalidation_direction}"`)
+            }
+        } else if (s.direction === 'bearish') {
+            if (s.trigger_direction !== 'below') {
+                errors.push(`Scenario "${s.title}": bearish scenario must have trigger_direction="below", got "${s.trigger_direction}"`)
+            }
+            if (s.invalidation_direction !== 'above') {
+                errors.push(`Scenario "${s.title}": bearish scenario must have invalidation_direction="above", got "${s.invalidation_direction}"`)
+            }
+        }
+
+        // Range check: levels must be within 3x ATR of current price
+        const maxDistance = atr * 3
+        if (maxDistance > 0) {
+            if (Math.abs(s.trigger_level - currentPrice) > maxDistance) {
+                errors.push(`Scenario "${s.title}": trigger_level ${s.trigger_level} is ${Math.abs(s.trigger_level - currentPrice).toFixed(5)} from price (max ${maxDistance.toFixed(5)})`)
+            }
+            if (Math.abs(s.invalidation_level - currentPrice) > maxDistance) {
+                errors.push(`Scenario "${s.title}": invalidation_level ${s.invalidation_level} is ${Math.abs(s.invalidation_level - currentPrice).toFixed(5)} from price (max ${maxDistance.toFixed(5)})`)
+            }
+        }
+    }
+
+    // Probability check
+    const totalProb = (result.scenarios || []).reduce((sum, s) => sum + s.probability, 0)
+    if (result.scenarios?.length === 2 && (totalProb < 0.85 || totalProb > 1.15)) {
+        errors.push(`Scenario probabilities sum to ${totalProb.toFixed(2)}, expected ~1.0`)
+    }
+
+    return { valid: errors.length === 0, errors }
+}
+
+/**
  * Parse flagged_levels from DeepSeek output (best-effort).
  * Returns empty array if parsing fails.
  */
@@ -78,8 +141,6 @@ export function parseFlaggedLevels(
         const jsonMatch = deepseekOutput.match(/\{[\s\S]*\}/)
         if (!jsonMatch) return []
 
-        // Use JSON5-style lenient parsing via the existing parseAIJson utility
-        // But here we do a simple JSON.parse since deepseek output should be clean
         const parsed = JSON.parse(jsonMatch[0])
         if (Array.isArray(parsed.flagged_levels)) {
             return parsed.flagged_levels.filter(
