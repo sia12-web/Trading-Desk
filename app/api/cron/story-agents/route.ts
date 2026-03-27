@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { runAgentsForPair } from '@/lib/story/agents/runner'
+import { notifyUser } from '@/lib/notifications/notifier'
 
 export const maxDuration = 300 // 5 minutes
 
@@ -14,7 +15,9 @@ export const maxDuration = 300 // 5 minutes
 export async function GET(req: NextRequest) {
     // Verify cron secret
     const authHeader = req.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const expectedSecret = `Bearer ${(process.env.CRON_SECRET || '').trim()}`
+    
+    if (!authHeader || authHeader.trim() !== expectedSecret) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -53,6 +56,20 @@ export async function GET(req: NextRequest) {
                 status: completedAgents.length > 0 ? 'processed' : 'skipped',
                 agents: completedAgents,
             })
+
+            // Daily Intelligence Briefing
+            if (completedAgents.length > 0) {
+                let summary = ''
+                if (intelligence.optimizer) summary += `📊 *Indicators:* ${intelligence.optimizer.summary.substring(0, 100)}...\n`
+                if (intelligence.news) summary += `📰 *News:* ${intelligence.news.summary.substring(0, 100)}...\n`
+                if (intelligence.crossMarket) summary += `🌐 *Market:* ${intelligence.crossMarket.summary.substring(0, 100)}...\n`
+
+                await notifyUser(sub.user_id, {
+                    title: `🤖 Intelligence Brief: ${sub.pair}`,
+                    body: summary || 'No major insights found today.',
+                    url: `/story/${sub.pair.replace('/', '-')}`
+                }, client)
+            }
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error'
             console.error(`Agents cron: Failed for ${sub.user_id}/${sub.pair}:`, message)

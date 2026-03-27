@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  skipTrailingSlashRedirect: true,
   /* 
   turbopack: {
     root: __dirname,

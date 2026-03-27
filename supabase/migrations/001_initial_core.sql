@@ -255,6 +255,8 @@ CREATE TABLE story_episodes (
     news_context JSONB,
     confidence NUMERIC(3,2),
     next_episode_preview TEXT,
+    agent_reports JSONB,
+    generation_source VARCHAR(20) DEFAULT 'manual',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -271,6 +273,11 @@ CREATE TABLE story_scenarios (
     trigger_conditions TEXT NOT NULL,
     invalidation TEXT NOT NULL,
     status VARCHAR(20) DEFAULT 'active',
+    monitor_active BOOLEAN DEFAULT TRUE,
+    trigger_level DECIMAL(10,5),
+    trigger_direction VARCHAR(10) CHECK (trigger_direction IN ('above', 'below')),
+    invalidation_level DECIMAL(10,5),
+    invalidation_direction VARCHAR(10) CHECK (invalidation_direction IN ('above', 'below')),
     outcome_notes TEXT,
     resolved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()

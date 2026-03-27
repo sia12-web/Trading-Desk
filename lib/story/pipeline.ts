@@ -20,6 +20,7 @@ import {
     getRecentlyResolvedScenarios,
 } from '@/lib/data/stories'
 import { validateStoryLevels, parseFlaggedLevels } from './validators'
+import { notifyUser } from '@/lib/notifications/notifier'
 import type { StoryResult } from './types'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -204,6 +205,13 @@ export async function generateStory(
             episodeId: episode.id,
             episodeNumber,
             title: result.story_title,
+        }, client)
+
+        // ── Step 7d: Notify User ──
+        await notifyUser(userId, {
+            title: `📖 New Story: ${pair}`,
+            body: result.story_title || `Episode ${episodeNumber} is now live.`,
+            url: `/story/${pair.replace('/', '-')}`
         }, client)
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error during story generation'

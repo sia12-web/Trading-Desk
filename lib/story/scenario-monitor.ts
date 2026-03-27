@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getCurrentPrices } from '@/lib/oanda/client'
 import { updateScenarioStatus } from '@/lib/data/stories'
 import { createTask } from '@/lib/background-tasks/manager'
+import { notifyUser } from '@/lib/notifications/notifier'
 import { generateStory } from './pipeline'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -191,6 +192,13 @@ export async function runScenarioMonitor(): Promise<MonitorResult> {
                 'bot',
                 client
             )
+
+            // Notify user of outcome
+            await notifyUser(scenario.user_id, {
+                title: `${evaluation === 'triggered' ? '🎯 Scenario Triggered' : '❌ Scenario Invalidated'}: ${scenario.pair}`,
+                body: `${scenario.title}\n\n${outcomeNotes}`,
+                url: `/story/${scenario.pair.replace('/', '-')}`
+            }, client)
 
             if (evaluation === 'triggered') {
                 result.triggered++
