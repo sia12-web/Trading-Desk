@@ -7,6 +7,16 @@ user-invocable: true
 
 You are now in **Feature Spec Mode**. Do NOT write any code yet. Follow this loop exactly:
 
+## Phase 0: System Understanding (MANDATORY)
+
+Before generating any spec, you MUST:
+
+1. **Read `CONTEXT.md`** at the project root — understand the full system architecture, existing pages, API routes, AI pipeline, database tables, and deployment config.
+2. **Check for conflicts** — verify the feature doesn't duplicate existing functionality listed in CONTEXT.md.
+3. **Identify integration points** — note which existing modules this feature touches.
+
+Do NOT proceed to Phase 1 until you have read CONTEXT.md.
+
 ## Phase 1: Spec Generation
 
 Based on the user's feature request (passed as args or from the previous message), produce a **Feature Spec** document with ALL of the following sections. Every section is mandatory — do not skip any.
@@ -53,21 +63,36 @@ One technology per choice. No "you could use X or Y". Be decisive. Example:
 - State management: React useState + useReducer
 - API calls: fetch via Next.js route handler
 
-**7. Test Scenarios**
+**7. Security Checklist**
+Verify each item applies and document how it's handled:
+- [ ] **Auth**: API route uses `supabase.auth.getUser()` (or explain why public)
+- [ ] **RLS**: New tables have `auth.uid() = user_id` policy enabled
+- [ ] **Input validation**: User inputs validated/sanitized before use
+- [ ] **Rate limiting**: AI calls respect 5/hour limit (or explain why exempt)
+- [ ] **Pair validation**: Pairs checked against `VALID_PAIRS` whitelist
+- [ ] **No client secrets**: API keys only used server-side
+
+**8. Deployment Awareness**
+- [ ] **New env vars?** List any new environment variables needed on Railway
+- [ ] **New cron job?** Needs `CRON_SECRET` auth + schedule configured
+- [ ] **DB migration?** Will be applied via Supabase MCP
+- [ ] **Breaking change?** Note if existing API contracts change
+
+**9. Test Scenarios**
 Since this project uses `npm run build` as verification, list concrete scenarios to manually verify AND the build check. Example:
 - Navigate to /feature → page renders without errors
 - Click "Generate" with no pair selected → shows validation error
 - Submit valid data → API returns 200, result displays correctly
 - `npm run build` passes with zero errors
 
-**8. Out of Scope**
+**10. Out of Scope**
 Explicitly list what this feature does NOT include. This prevents gold-plating. Example:
 - No caching layer for V1
 - No mobile-specific layout
 - No analytics tracking
 - No admin panel
 
-**9. MEMORY.md Update**
+**11. MEMORY.md Update**
 Exact text to append to the project's MEMORY.md after completion. Keep it concise — 2-5 lines max. Example:
 ```
 ## Feature Name
@@ -76,7 +101,7 @@ Exact text to append to the project's MEMORY.md after completion. Keep it concis
 - API: endpoint if applicable
 ```
 
-**10. Acceptance Criteria**
+**12. Acceptance Criteria**
 Numbered checklist. The LAST item is always:
 - [ ] `npm run build` passes with zero errors
 
@@ -100,7 +125,8 @@ Once approved:
 4. After all code is written, run `npm run build` to verify
 5. If build fails, fix errors and re-run until it passes
 6. Update MEMORY.md with the exact text from the spec
-7. Report completion with a summary of what was built
+7. Update CONTEXT.md if the feature adds new pages, API routes, tables, or cron jobs
+8. Report completion with a summary of what was built
 
 ## Rules
 
