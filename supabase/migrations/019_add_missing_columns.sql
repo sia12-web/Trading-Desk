@@ -94,84 +94,7 @@ COMMENT ON COLUMN technical_analyses.structured_data IS 'JSON object with indica
 COMMENT ON COLUMN technical_analyses.narrative IS 'AI-generated narrative summary of the analysis';
 COMMENT ON COLUMN technical_analyses.full_text IS 'Complete analysis text including all details';
 
--- ============================================
--- PART 3: Create scalp_trades Table
--- ============================================
 
-CREATE TABLE IF NOT EXISTS scalp_trades (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    session_id UUID NOT NULL REFERENCES scalp_sessions(id) ON DELETE CASCADE,
-
-    -- Trade details
-    direction VARCHAR(10) NOT NULL CHECK (direction IN ('long', 'short')),
-    entry_price DECIMAL(10,5) NOT NULL,
-    exit_price DECIMAL(10,5),
-
-    -- Outcome
-    pnl DECIMAL(10,2),
-    pnl_pips DECIMAL(6,2),
-
-    -- Timing
-    opened_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    closed_at TIMESTAMP WITH TIME ZONE,
-
-    -- Metadata
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_scalp_trades_session ON scalp_trades(session_id, opened_at DESC);
-CREATE INDEX IF NOT EXISTS idx_scalp_trades_open ON scalp_trades(session_id) WHERE closed_at IS NULL;
-
--- Enable RLS
-ALTER TABLE scalp_trades ENABLE ROW LEVEL SECURITY;
-
--- RLS Policies (access controlled through parent session)
-DROP POLICY IF EXISTS "Users can view own scalp trades" ON scalp_trades;
-CREATE POLICY "Users can view own scalp trades" ON scalp_trades
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM scalp_sessions
-            WHERE scalp_sessions.id = scalp_trades.session_id
-            AND scalp_sessions.user_id = auth.uid()
-        )
-    );
-
-DROP POLICY IF EXISTS "Users can insert own scalp trades" ON scalp_trades;
-CREATE POLICY "Users can insert own scalp trades" ON scalp_trades
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM scalp_sessions
-            WHERE scalp_sessions.id = scalp_trades.session_id
-            AND scalp_sessions.user_id = auth.uid()
-        )
-    );
-
-DROP POLICY IF EXISTS "Users can update own scalp trades" ON scalp_trades;
-CREATE POLICY "Users can update own scalp trades" ON scalp_trades
-    FOR UPDATE USING (
-        EXISTS (
-            SELECT 1 FROM scalp_sessions
-            WHERE scalp_sessions.id = scalp_trades.session_id
-            AND scalp_sessions.user_id = auth.uid()
-        )
-    );
-
-DROP POLICY IF EXISTS "Users can delete own scalp trades" ON scalp_trades;
-CREATE POLICY "Users can delete own scalp trades" ON scalp_trades
-    FOR DELETE USING (
-        EXISTS (
-            SELECT 1 FROM scalp_sessions
-            WHERE scalp_sessions.id = scalp_trades.session_id
-            AND scalp_sessions.user_id = auth.uid()
-        )
-    );
-
-COMMENT ON TABLE scalp_trades IS 'Individual trades executed during Rapid Fire scalping sessions';
-COMMENT ON COLUMN scalp_trades.session_id IS 'Foreign key to scalp_sessions';
-COMMENT ON COLUMN scalp_trades.direction IS 'Trade direction: long or short';
-COMMENT ON COLUMN scalp_trades.pnl IS 'Profit/loss in account currency';
-COMMENT ON COLUMN scalp_trades.pnl_pips IS 'Profit/loss in pips';
 
 -- ============================================
 -- PART 4: Add oanda_account_id to technical_analyses (if migration 018 was run)
@@ -242,15 +165,4 @@ BEGIN
     END IF;
 END $$;
 
--- Verify scalp_trades table created
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_name = 'scalp_trades'
-    ) THEN
-        RAISE NOTICE '✅ scalp_trades table exists';
-    ELSE
-        RAISE WARNING '❌ scalp_trades table NOT created';
-    END IF;
-END $$;
+

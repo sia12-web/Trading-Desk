@@ -33,9 +33,6 @@ export async function POST() {
             'trades',
             'trade_sync_log',
 
-            // Strategy signals
-            'strategy_signals',
-
             // Daily Trading Companion
             'daily_tasks',
             'daily_plans',
@@ -45,7 +42,6 @@ export async function POST() {
             'ai_coaching_sessions',
             'coaching_memory',
             'behavioral_analysis',
-            'ai_session_reviews',
 
             // Technical Analysis
             'wave_analysis',
