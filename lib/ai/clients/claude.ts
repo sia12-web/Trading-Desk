@@ -124,7 +124,7 @@ export async function callClaudeWithCaching(
     options: CachedClaudeOptions = {}
 ): Promise<string> {
     const {
-        timeout = 90_000,
+        timeout = 180_000,
         maxTokens = 8192,
         model = 'claude-opus-4-6',
         usage,

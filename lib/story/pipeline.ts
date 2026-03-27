@@ -215,7 +215,7 @@ export async function generateStory(
             riskContextBlock
         )
         const claudeOutput = await callClaudeWithCaching(cacheablePrefix, dynamicPrompt, {
-            timeout: 90_000,
+            timeout: 180_000,
             maxTokens: 8192,
         })
         console.log(`${TAG} [Claude] Done in ${((Date.now() - claudeStart) / 1000).toFixed(1)}s — ${claudeOutput.length} chars`)
@@ -244,7 +244,7 @@ Fix these issues and regenerate the COMPLETE JSON response. Remember:
 
             try {
                 const retryOutput = await callClaudeWithCaching(cacheablePrefix, correctionPrompt, {
-                    timeout: 90_000,
+                    timeout: 180_000,
                     maxTokens: 8192,
                 })
                 result = parseAIJson<StoryResult>(retryOutput)
