@@ -1,0 +1,206 @@
+
+> tradedesk@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 8 errors:
+./app/api/calendar/import-daily-plan/route.ts:3:1
+Module not found: Can't resolve '@/lib/data/daily-plan'
+[0m [90m 1 |[39m [36mimport[39m { createClient } [36mfrom[39m [32m'@/lib/supabase/server'[39m
+ [90m 2 |[39m [36mimport[39m { [33mNextResponse[39m } [36mfrom[39m [32m'next/server'[39m
+[31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { getTodayPlan[33m,[39m [33mDailyTask[39m } [36mfrom[39m [32m'@/lib/data/daily-plan'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 4 |[39m [36mimport[39m { createCalendarEvent } [36mfrom[39m [32m'@/lib/data/calendar'[39m
+ [90m 5 |[39m [36mimport[39m { isDST } [36mfrom[39m [32m'@/lib/utils/market-sessions'[39m
+ [90m 6 |[39m[0m
+
+Import map: aliased to relative './lib/data/daily-plan' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./app/api/news/fetch/route.ts:4:1
+Module not found: Can't resolve '@/lib/news/news-sentiment'
+[0m [90m 2 |[39m [36mimport[39m { createClient } [36mfrom[39m [32m'@/lib/supabase/server'[39m
+ [90m 3 |[39m [36mimport[39m { fetchForexFactoryCalendar[33m,[39m getUpcomingEventsForPair } [36mfrom[39m [32m'@/lib/news/forex-factory-client'[39m
+[31m[1m>[22m[39m[90m 4 |[39m [36mimport[39m { fetchForexNews[33m,[39m analyzeNewsSentiment[33m,[39m [33mNewsSentiment[39m } [36mfrom[39m [32m'@/lib/news/news-sentiment'[39m
+ [90m   |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 5 |[39m
+ [90m 6 |[39m [36mexport[39m [36mconst[39m runtime [33m=[39m [32m'nodejs'[39m
+ [90m 7 |[39m[0m
+
+Import map: aliased to relative './lib/news/news-sentiment' inside of [project]/
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./lib/signals/compression-signal-generator.ts:9:1
+Module not found: Can't resolve '@/lib/optimizer/data-fetcher'
+[0m [90m  7 |[39m [90m */[39m
+ [90m  8 |[39m
+[31m[1m>[22m[39m[90m  9 |[39m [36mimport[39m { fetchHistoricalCandles } [36mfrom[39m [32m'@/lib/optimizer/data-fetcher'[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 10 |[39m [36mimport[39m { calculateAllIndicators } [36mfrom[39m [32m'@/lib/strategy/calculators'[39m
+ [90m 11 |[39m [36mimport[39m { getPipLocationForPair } [36mfrom[39m [32m'@/lib/optimizer/data-fetcher'[39m
+ [90m 12 |[39m [36mimport[39m type { [33mTradingSignal[39m } [36mfrom[39m [32m'./generator'[39m[0m
+
+Import map: aliased to relative './lib/optimizer/data-fetcher' inside of [project]/
+
+
+Import trace:
+  App Route:
+    ./lib/signals/compression-signal-generator.ts
+    ./app/api/cron/signal-monitor/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./lib/signals/compression-signal-generator.ts:11:1
+Module not found: Can't resolve '@/lib/optimizer/data-fetcher'
+[0m [90m  9 |[39m [36mimport[39m { fetchHistoricalCandles } [36mfrom[39m [32m'@/lib/optimizer/data-fetcher'[39m
+ [90m 10 |[39m [36mimport[39m { calculateAllIndicators } [36mfrom[39m [32m'@/lib/strategy/calculators'[39m
+[31m[1m>[22m[39m[90m 11 |[39m [36mimport[39m { getPipLocationForPair } [36mfrom[39m [32m'@/lib/optimizer/data-fetcher'[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 12 |[39m [36mimport[39m type { [33mTradingSignal[39m } [36mfrom[39m [32m'./generator'[39m
+ [90m 13 |[39m [36mimport[39m type { [33mOandaCandle[39m } [36mfrom[39m [32m'@/lib/types/oanda'[39m
+ [90m 14 |[39m[0m
+
+Import map: aliased to relative './lib/optimizer/data-fetcher' inside of [project]/
+
+
+Import trace:
+  App Route:
+    ./lib/signals/compression-signal-generator.ts
+    ./app/api/cron/signal-monitor/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./lib/signals/generator.ts:9:1
+Module not found: Can't resolve '@/lib/optimizer/data-fetcher'
+[0m [90m  7 |[39m [36mimport[39m { getCurrentPrices[33m,[39m fetchHistoricalCandles } [36mfrom[39m [32m'@/lib/oanda/client'[39m
+ [90m  8 |[39m [36mimport[39m { calculateAllIndicators } [36mfrom[39m [32m'@/lib/strategy/calculators'[39m
+[31m[1m>[22m[39m[90m  9 |[39m [36mimport[39m { getPipLocationForPair } [36mfrom[39m [32m'@/lib/optimizer/data-fetcher'[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 10 |[39m
+ [90m 11 |[39m [36mexport[39m [36minterface[39m [33mTradingSignal[39m {
+ [90m 12 |[39m     strategy_id[33m:[39m string[0m
+
+Import map: aliased to relative './lib/optimizer/data-fetcher' inside of [project]/
+
+
+Import trace:
+  App Route:
+    ./lib/signals/generator.ts
+    ./app/api/cron/signal-monitor/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./lib/signals/indicator-generator.ts:7:1
+Module not found: Can't resolve '@/lib/optimizer/data-fetcher'
+[0m [90m  5 |[39m [90m */[39m
+ [90m  6 |[39m
+[31m[1m>[22m[39m[90m  7 |[39m [36mimport[39m { fetchHistoricalCandles[33m,[39m getPipLocationForPair } [36mfrom[39m [32m'@/lib/optimizer/data-fetcher'[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  8 |[39m [36mimport[39m { [33mALL_STRATEGIES[39m } [36mfrom[39m [32m'@/lib/optimizer/signals'[39m
+ [90m  9 |[39m [36mimport[39m type { [33mTradingSignal[39m } [36mfrom[39m [32m'./generator'[39m
+ [90m 10 |[39m [36mimport[39m type { [33mOandaCandle[39m } [36mfrom[39m [32m'@/lib/types/oanda'[39m[0m
+
+Import map: aliased to relative './lib/optimizer/data-fetcher' inside of [project]/
+
+
+Import trace:
+  App Route:
+    ./lib/signals/indicator-generator.ts
+    ./app/api/cron/signal-monitor/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./lib/strategy/calculators.ts:3:1
+Module not found: Can't resolve '@/lib/optimizer/indicators'
+[0m [90m  1 |[39m [36mimport[39m { [33mOandaCandle[39m } [36mfrom[39m [32m"@/lib/types/oanda"[39m
+ [90m  2 |[39m [36mimport[39m { [33mCalculatedIndicators[39m[33m,[39m [33mPivotPointLevels[39m } [36mfrom[39m [32m"./types"[39m
+[31m[1m>[22m[39m[90m  3 |[39m [36mimport[39m {
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  4 |[39m     calculateEMA[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  5 |[39m     calculateSMA[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  6 |[39m     calculateRSI[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  7 |[39m     calculateMACD[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  8 |[39m     calculateATR[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m  9 |[39m     calculateADX[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 10 |[39m     calculateStochastic[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 11 |[39m     calculateBollingerBands[33m,[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 12 |[39m     calculateParabolicSAR
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+[31m[1m>[22m[39m[90m 13 |[39m } [36mfrom[39m [32m"@/lib/optimizer/indicators"[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 14 |[39m [36mimport[39m { calculatePivotPoints } [36mfrom[39m [32m"./strategies/pipo"[39m
+ [90m 15 |[39m
+ [90m 16 |[39m [36mexport[39m [36mfunction[39m calculateAllIndicators([0m
+
+Import map: aliased to relative './lib/optimizer/indicators' inside of [project]/
+
+
+Import trace:
+  App Route:
+    ./lib/strategy/calculators.ts
+    ./lib/signals/compression-signal-generator.ts
+    ./app/api/cron/signal-monitor/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./lib/signals/indicator-generator.ts:8:1
+Module not found: Can't resolve '@/lib/optimizer/signals'
+[0m [90m  6 |[39m
+ [90m  7 |[39m [36mimport[39m { fetchHistoricalCandles[33m,[39m getPipLocationForPair } [36mfrom[39m [32m'@/lib/optimizer/data-fetcher'[39m
+[31m[1m>[22m[39m[90m  8 |[39m [36mimport[39m { [33mALL_STRATEGIES[39m } [36mfrom[39m [32m'@/lib/optimizer/signals'[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  9 |[39m [36mimport[39m type { [33mTradingSignal[39m } [36mfrom[39m [32m'./generator'[39m
+ [90m 10 |[39m [36mimport[39m type { [33mOandaCandle[39m } [36mfrom[39m [32m'@/lib/types/oanda'[39m
+ [90m 11 |[39m[0m
+
+Import map: aliased to relative './lib/optimizer/signals' inside of [project]/
+
+
+Import trace:
+  App Route:
+    ./lib/signals/indicator-generator.ts
+    ./app/api/cron/signal-monitor/route.ts
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./app/api/calendar/import-daily-plan/route.ts:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./app/api/news/fetch/route.ts:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./lib/signals/compression-signal-generator.ts:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./lib/signals/compression-signal-generator.ts:11:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./lib/signals/generator.ts:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./lib/signals/indicator-generator.ts:7:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./lib/strategy/calculators.ts:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./lib/signals/indicator-generator.ts:8:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)

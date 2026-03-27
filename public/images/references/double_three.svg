@@ -1,0 +1,15 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- W Wave (ABC zigzag) -->
+  <path d="M 20 100 L 50 180 L 80 130 L 110 210" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="60" y="230" fill="#a78bfa" font-size="14" font-weight="bold">W</text>
+  
+  <!-- X Wave (Correction) -->
+  <path d="M 110 210 L 150 110 L 190 150" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="150" y="100" fill="#60a5fa" font-size="14" font-weight="bold">X</text>
+  
+  <!-- Y Wave (ABC zigzag) -->
+  <path d="M 190 150 L 230 230 L 270 180 L 310 260" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="250" y="280" fill="#a78bfa" font-size="14" font-weight="bold">Y</text>
+  
+  <text x="200" y="50" fill="white" font-size="16" font-weight="bold" text-anchor="middle">Double Three (W-X-Y)</text>
+</svg>

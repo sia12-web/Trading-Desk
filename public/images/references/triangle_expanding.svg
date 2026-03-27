@@ -1,0 +1,15 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Diverging Trendlines -->
+  <line x1="50" y1="120" x2="350" y2="50" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5 5" />
+  <line x1="50" y1="180" x2="350" y2="250" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5 5" />
+  
+  <!-- Waves: A-B-C-D-E -->
+  <path d="M 50 120 L 110 195 L 170 70 L 230 225 L 290 50 L 350 250" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Labels -->
+  <text x="50" y="110" fill="white" font-size="16" font-weight="bold">A</text>
+  <text x="100" y="220" fill="white" font-size="16" font-weight="bold">B</text>
+  <text x="160" y="60" fill="white" font-size="16" font-weight="bold">C</text>
+  <text x="220" y="250" fill="white" font-size="16" font-weight="bold">D</text>
+  <text x="280" y="40" fill="white" font-size="16" font-weight="bold">E</text>
+</svg>

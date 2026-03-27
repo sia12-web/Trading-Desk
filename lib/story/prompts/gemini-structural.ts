@@ -1,0 +1,115 @@
+import type { StoryDataPayload } from '../types'
+import type { StoryNewsContext } from '../types'
+
+/**
+ * Gemini "Pattern Archaeologist" prompt for Story.
+ * Processes ALL raw data across 5 TFs, outputs structural map.
+ */
+export function buildStoryStructuralPrompt(
+    data: StoryDataPayload,
+    news: StoryNewsContext
+): string {
+    const tfSummaries = data.timeframes.map(tf => {
+        const lastCandle = tf.candles[tf.candles.length - 1]
+        const last5 = tf.candles.slice(-5)
+        const adx = tf.indicators.adx
+        const rsi = tf.indicators.rsi
+        const macd = tf.indicators.macd
+        const bbWidth = tf.indicators.bbWidth
+
+        return `### ${tf.timeframe} Timeframe (${tf.candles.length} candles)
+- **Trend**: ${tf.trend.direction} (score: ${tf.trend.score}/100, ADX: ${tf.trend.adxValue.toFixed(1)})
+- **Last Close**: ${parseFloat(lastCandle.mid.c).toFixed(5)}
+- **RSI**: ${rsi[rsi.length - 1]?.toFixed(1) || 'N/A'}
+- **MACD**: line=${macd.line[macd.line.length - 1]?.toFixed(6) || 'N/A'}, histogram=${macd.histogram[macd.histogram.length - 1]?.toFixed(6) || 'N/A'}
+- **ADX**: ${adx[adx.length - 1]?.toFixed(1) || 'N/A'}
+- **BB Width**: ${bbWidth[bbWidth.length - 1]?.toFixed(2) || 'N/A'}%
+- **Patterns**: ${tf.patterns.length > 0 ? tf.patterns.join(', ') : 'none'}
+- **Swing Highs**: ${tf.swingHighs.slice(-3).map(s => s.price.toFixed(5)).join(', ') || 'none'}
+- **Swing Lows**: ${tf.swingLows.slice(-3).map(s => s.price.toFixed(5)).join(', ') || 'none'}
+- **Volume trend**: ${describeVolume(tf.indicators.volume, tf.indicators.volumeSma)}
+- **EMA alignment**: ${describeEMAs(tf.indicators.ema)}
+- **Last 5 candles**: ${last5.map(c => `${parseFloat(c.mid.o).toFixed(5)}->${parseFloat(c.mid.c).toFixed(5)} (H:${parseFloat(c.mid.h).toFixed(5)} L:${parseFloat(c.mid.l).toFixed(5)})`).join(' | ')}`
+    }).join('\n\n')
+
+    const amdSummary = Object.entries(data.amdPhases)
+        .map(([tf, phase]) => `- ${tf}: ${phase.phase} (confidence: ${phase.confidence}%) — ${phase.signals.join('; ')}`)
+        .join('\n')
+
+    const liquiditySummary = data.liquidityZones.length > 0
+        ? data.liquidityZones.map(z => `- [${z.timeframe}] ${z.type}: ${z.description}${z.swept ? ' (SWEPT)' : ''}`).join('\n')
+        : 'No significant liquidity zones detected.'
+
+    return `You are the Pattern Archaeologist — a structural analyst for forex markets.
+Your job is to dig through multi-timeframe data and find the structural story.
+
+## GROUNDING RULES (MANDATORY)
+- ONLY reference price levels that appear in the candle data below (swing highs, swing lows, OHLC values).
+- NEVER fabricate or estimate price levels. Every level you cite must be traceable to a specific candle or swing point.
+- If data is insufficient for a particular timeframe, explicitly state "insufficient data" rather than guessing.
+- All key_levels must come from actual swing highs/lows or candle boundaries provided below.
+
+## PAIR: ${data.pair}
+**Current Price**: ${data.currentPrice.toFixed(5)}
+**Volatility**: ${data.volatilityStatus} (ATR14: ${data.atr14.toFixed(1)} pips)
+**Data collected at**: ${data.collectedAt}
+
+## FUNDAMENTAL CONTEXT
+- Sentiment: ${news.sentiment}
+- Key drivers: ${news.key_drivers.join(', ')}
+- ${news.fundamental_narrative}
+${news.avoidTrading ? '⚠️ HIGH-IMPACT NEWS IMMINENT — trading avoidance recommended' : ''}
+
+## MULTI-TIMEFRAME DATA
+${tfSummaries}
+
+## AMD PHASE ASSESSMENT (algorithmic)
+${amdSummary}
+
+## LIQUIDITY ZONES
+${liquiditySummary}
+
+## YOUR TASK
+Analyze ALL the data above and produce a JSON response:
+{
+  "structural_bias": "bullish" | "bearish" | "neutral",
+  "bias_confidence": 0-100,
+  "key_levels": {
+    "major_resistance": [price1, price2],
+    "major_support": [price1, price2],
+    "liquidity_targets": [price1, price2]
+  },
+  "pattern_confluences": ["description of pattern alignment across TFs..."],
+  "cycle_assessment": "Where is this pair in its cycle? Accumulation, markup, distribution, markdown?",
+  "multi_tf_alignment": "Do all TFs agree? Where are conflicts?",
+  "structural_narrative": "A 3-4 sentence paragraph summarizing the structural story of this pair right now.",
+  "optimization_suggestions": ["What indicators are most relevant given current structure?"]
+}
+
+Be precise with price levels. Reference specific timeframes. Look for confluences where multiple TFs tell the same story.`
+}
+
+function describeVolume(volume: number[], volumeSma: number[]): string {
+    if (volume.length === 0 || volumeSma.length === 0) return 'N/A'
+    const current = volume[volume.length - 1]
+    const avg = volumeSma[volumeSma.length - 1]
+    if (!avg) return 'N/A'
+    const ratio = current / avg
+    if (ratio > 2) return `spike (${ratio.toFixed(1)}x avg)`
+    if (ratio > 1.3) return `above average (${ratio.toFixed(1)}x)`
+    if (ratio < 0.5) return `very low (${ratio.toFixed(1)}x avg)`
+    return `normal (${ratio.toFixed(1)}x avg)`
+}
+
+function describeEMAs(ema: Record<number, number[]>): string {
+    const periods = [8, 21, 50, 200].filter(p => ema[p]?.length > 0)
+    if (periods.length < 2) return 'N/A'
+
+    const values = periods.map(p => ({ period: p, value: ema[p][ema[p].length - 1] }))
+    const bullish = values.every((v, i) => i === 0 || v.value < values[i - 1].value)
+    const bearish = values.every((v, i) => i === 0 || v.value > values[i - 1].value)
+
+    if (bullish) return 'bullish stack (short > long)'
+    if (bearish) return 'bearish stack (short < long)'
+    return 'mixed/crossing'
+}

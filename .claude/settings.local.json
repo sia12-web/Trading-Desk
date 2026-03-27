@@ -1,0 +1,51 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npx supabase db push:*)",
+      "Bash(find:*)",
+      "Bash(npx next build:*)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Bash(wc:*)",
+      "WebSearch",
+      "Bash(head:*)",
+      "Bash(curl:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(dir:*)",
+      "Bash(for file in \"C:\\\\Users\\\\shahb\\\\myApplications\\\\Trade Desk\"/lib/**/*.ts \"C:\\\\Users\\\\shahb\\\\myApplications\\\\Trade Desk\"/lib/**/*.tsx)",
+      "Bash(do basename \"$file\")",
+      "Bash(done)",
+      "Bash(xargs:*)",
+      "WebFetch(domain:developer.oanda.com)",
+      "WebFetch(domain:oanda-api-v20.readthedocs.io)",
+      "Bash(grep:*)",
+      "Bash(del:*)",
+      "Bash(npx supabase:*)",
+      "Bash(claude mcp add:*)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "Bash(npm install:*)",
+      "mcp__supabase__get_advisors",
+      "Bash(npx web-push generate-vapid-keys)",
+      "WebFetch(domain:localhost)",
+      "Bash(node -e:*)",
+      "WebFetch(domain:api-docs.deepseek.com)",
+      "Bash(Sort-Object Name -Descending)",
+      "Bash(Select-Object -First 5)",
+      "Bash(cd:*)",
+      "WebFetch(domain:ai.google.dev)",
+      "mcp__supabase__generate_typescript_types",
+      "Bash(npm ls:*)",
+      "Bash(git init:*)",
+      "Bash(test:*)",
+      "Bash(git add:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}

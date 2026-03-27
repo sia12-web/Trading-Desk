@@ -1,0 +1,395 @@
+export interface PairKnowledge {
+    pair: string;
+    displayName: string;
+    baseCurrency: string;
+    quoteCurrency: string;
+    nickname: string | null;
+
+    // Session data
+    bestSessions: string[];
+    worstSessions: string[];
+    avgDailyRange: number; // pips
+    avgRangeBySession: Record<string, number>;
+
+    // What drives this pair
+    drivers: string[];
+
+    // Correlations with other pairs
+    correlations: { pair: string; type: "positive" | "negative"; strength: "strong" | "moderate"; explanation: string }[];
+
+    // Common mistakes
+    warnings: string[];
+
+    // Quick tips
+    tips: string[];
+
+    // Intelligence summary (consolidated from session-pairs)
+    intelligenceSummary: string;
+
+    // Relative strength note
+    strengthNote?: string;
+}
+
+export function getSessionAdvice(pair: string, currentSession: any): string {
+    const knowledge = PAIR_KNOWLEDGE[pair.replace('_', '/')];
+    if (!knowledge) return "General market conditions apply to this pair.";
+
+    const { displaySession, marketPhase } = currentSession;
+
+    if (marketPhase === 'weekend') {
+        return "⚠️ Market is closed for the weekend. Expect spread gaps on Sunday open.";
+    }
+
+    const isIdeal = knowledge.bestSessions.some(s =>
+        s.toLowerCase().includes(displaySession.toLowerCase()) ||
+        displaySession.toLowerCase().includes(s.toLowerCase())
+    );
+
+    const isWorst = knowledge.worstSessions.some(s =>
+        s.toLowerCase().includes(displaySession.toLowerCase()) ||
+        displaySession.toLowerCase().includes(s.toLowerCase())
+    );
+
+    if (isIdeal) {
+        return `✅ Ideal session for ${knowledge.pair}. Current: ${displaySession}. Spreads are usually tightest and liquidity highest.`;
+    }
+
+    if (isWorst) {
+        return `⚠️ Suboptimal session. ${knowledge.pair} moves best during ${knowledge.bestSessions.join(' or ')}. Currently in ${displaySession} (${knowledge.worstSessions[0]} is usually choppy).`;
+    }
+
+    return `📍 ${displaySession} session active. ${knowledge.pair} performs best in ${knowledge.bestSessions.join(', ')}.`;
+}
+
+export const PAIR_KNOWLEDGE: Record<string, PairKnowledge> = {
+    "EUR/USD": {
+        pair: "EUR/USD",
+        displayName: "Euro / US Dollar",
+        baseCurrency: "EUR",
+        quoteCurrency: "USD",
+        nickname: "Fiber",
+        bestSessions: ["London", "London-New York overlap"],
+        worstSessions: ["Tokyo"],
+        avgDailyRange: 80,
+        avgRangeBySession: { "Tokyo": 30, "London": 80, "New York": 70, "London-NY overlap": 100 },
+        intelligenceSummary: "Most liquid pair. Tightest spreads during London-NY overlap. Avoid trading during Tokyo — low volatility, choppy.",
+        drivers: [
+            "ECB interest rate decisions and press conferences",
+            "US Federal Reserve policy and FOMC statements",
+            "Eurozone and US employment data (NFP)",
+            "Inflation reports (CPI) from both regions",
+            "Risk sentiment — EUR weakens in risk-off environments"
+        ],
+        correlations: [
+            { pair: "GBP/USD", type: "positive", strength: "strong", explanation: "Both move against USD. When dollar weakens, both tend to rise." },
+            { pair: "USD/CHF", type: "negative", strength: "strong", explanation: "Almost mirror image. EUR/USD up usually means USD/CHF down." },
+            { pair: "USD/JPY", type: "negative", strength: "moderate", explanation: "Generally inverse, but JPY has its own dynamics during risk events." }
+        ],
+        warnings: [
+            "Extremely choppy during Tokyo — avoid unless you have a specific catalyst",
+            "Spreads widen significantly during low-liquidity hours (22:00-00:00 UTC)",
+            "NFP Friday (first Friday of month, 13:30 UTC) creates massive spikes — either avoid or trade with wider SL"
+        ],
+        tips: [
+            "The London open (07:00 UTC) often sets the day's direction for EUR/USD",
+            "Watch the 1.x000 round numbers — they act as psychological support/resistance",
+            "If trading during London-NY overlap, this pair has the tightest spreads in the market"
+        ]
+    },
+    "GBP/USD": {
+        pair: "GBP/USD",
+        displayName: "British Pound / US Dollar",
+        baseCurrency: "GBP",
+        quoteCurrency: "USD",
+        nickname: "Cable",
+        bestSessions: ["London", "London-New York overlap"],
+        worstSessions: ["Tokyo"],
+        avgDailyRange: 100,
+        avgRangeBySession: { "Tokyo": 35, "London": 100, "New York": 80, "London-NY overlap": 120 },
+        intelligenceSummary: "Volatile during London open. Often sees sharp moves in first hour of London. Be cautious of UK news at 07:00-09:30 UTC.",
+        drivers: [
+            "Bank of England rate decisions",
+            "UK employment, GDP, and inflation data",
+            "US Federal Reserve policy",
+            "Brexit-related political developments",
+            "Risk sentiment — GBP is moderately risk-sensitive"
+        ],
+        correlations: [
+            { pair: "EUR/USD", type: "positive", strength: "strong", explanation: "Both are anti-dollar. They often move together but GBP is more volatile." },
+            { pair: "EUR/GBP", type: "negative", strength: "strong", explanation: "When GBP/USD rises but EUR/USD doesn't keep up, EUR/GBP falls." },
+            { pair: "GBP/JPY", type: "positive", strength: "strong", explanation: "Both reflect GBP strength. GBP/JPY amplifies GBP moves." }
+        ],
+        warnings: [
+            "GBP is more volatile than EUR — moves can be sharp and sudden during London",
+            "UK data releases (07:00-09:30 UTC) can cause 50+ pip spikes",
+            "GBP/USD tends to 'fake out' at session opens — wait 15-30 min for direction to establish"
+        ],
+        tips: [
+            "The first hour of London often produces the day's biggest GBP move",
+            "Cable respects round numbers (1.x000, 1.x500) as key psychological levels",
+            "If you're already long EUR/USD, going long GBP/USD doubles your USD exposure — check correlated exposure rule"
+        ]
+    },
+    "USD/JPY": {
+        pair: "USD/JPY",
+        displayName: "US Dollar / Japanese Yen",
+        baseCurrency: "USD",
+        quoteCurrency: "JPY",
+        nickname: "Gopher",
+        bestSessions: ["Tokyo", "New York", "London-New York overlap"],
+        worstSessions: ["Late New York (after London close)"],
+        avgDailyRange: 70,
+        avgRangeBySession: { "Tokyo": 40, "London": 50, "New York": 60, "London-NY overlap": 70 },
+        intelligenceSummary: "Active during Tokyo — driven by Japanese economic data and BoJ. Second wave of activity during NY session.",
+        drivers: [
+            "Bank of Japan policy (yield curve control, rate decisions)",
+            "US Treasury yields — strong positive correlation",
+            "Risk sentiment — JPY strengthens in risk-off (market fear)",
+            "Japanese trade balance and capital flows",
+            "US economic data (especially employment and inflation)"
+        ],
+        correlations: [
+            { pair: "EUR/JPY", type: "positive", strength: "strong", explanation: "Both reflect JPY weakness/strength. When JPY weakens, both rise." },
+            { pair: "GBP/JPY", type: "positive", strength: "strong", explanation: "Same JPY dynamic but amplified by GBP volatility." },
+            { pair: "EUR/USD", type: "negative", strength: "moderate", explanation: "Generally inverse when USD is the driver, but diverges when JPY safe-haven flows dominate." }
+        ],
+        warnings: [
+            "Bank of Japan interventions can cause 200-500 pip moves with zero warning",
+            "JPY pairs use 2 decimal pips (not 4) — your system handles this automatically",
+            "USD/JPY often gaps on Sunday open due to Asian market reactions to weekend events"
+        ],
+        tips: [
+            "Watch US 10-year Treasury yield — USD/JPY tracks it closely",
+            "Tokyo session (00:00-09:00 UTC) is when Japanese institutions set JPY direction",
+            "Round numbers on JPY (150.000, 155.000) are heavily defended by BoJ — expect resistance"
+        ]
+    },
+    "EUR/GBP": {
+        pair: "EUR/GBP",
+        displayName: "Euro / British Pound",
+        baseCurrency: "EUR",
+        quoteCurrency: "GBP",
+        nickname: null,
+        bestSessions: ["London"],
+        worstSessions: ["Tokyo", "New York (after London close)"],
+        avgDailyRange: 45,
+        avgRangeBySession: { "Tokyo": 15, "London": 45, "New York": 25, "London-NY overlap": 35 },
+        intelligenceSummary: "European cross — almost exclusively a London session pair. Very low volatility outside London hours.",
+        drivers: [
+            "ECB vs Bank of England policy divergence",
+            "Relative economic performance UK vs Eurozone",
+            "Political developments in either region"
+        ],
+        correlations: [
+            { pair: "EUR/USD", type: "positive", strength: "moderate", explanation: "When EUR is strong overall, EUR/GBP tends to rise." },
+            { pair: "GBP/USD", type: "negative", strength: "strong", explanation: "When GBP strengthens, EUR/GBP falls." }
+        ],
+        warnings: [
+            "This pair barely moves outside London hours — don't expect your TP to hit during Tokyo or late NY",
+            "Small daily range means position sizing needs adjustment — your 30 pip SL might be half the daily range",
+            "Spreads are wider than the majors — factor this into your risk calculation"
+        ],
+        tips: [
+            "Best traded when UK and Eurozone data releases conflict (one bullish, one bearish)",
+            "This is a mean-reverting pair — it tends to range rather than trend strongly",
+            "If you're trading both EUR/USD and GBP/USD, EUR/GBP is already an implicit position"
+        ]
+    },
+    "AUD/USD": {
+        pair: "AUD/USD",
+        displayName: "Australian Dollar / US Dollar",
+        baseCurrency: "AUD",
+        quoteCurrency: "USD",
+        nickname: "Aussie",
+        bestSessions: ["Tokyo", "London-New York overlap"],
+        worstSessions: ["Late New York"],
+        avgDailyRange: 60,
+        avgRangeBySession: { "Tokyo": 45, "London": 50, "New York": 55, "London-NY overlap": 65 },
+        intelligenceSummary: "Most active during Tokyo due to Australian economic releases. Commodity-linked — watch gold and iron ore.",
+        drivers: [
+            "Reserve Bank of Australia rate decisions",
+            "Chinese economic data (Australia's largest trade partner)",
+            "Iron ore and gold prices — AUD is commodity-linked",
+            "Risk sentiment — AUD is a risk-on currency",
+            "Australian employment and GDP data"
+        ],
+        correlations: [
+            { pair: "NZD/USD", type: "positive", strength: "strong", explanation: "Very similar economies and drivers. Often move in tandem." },
+            { pair: "Gold (XAU/USD)", type: "positive", strength: "moderate", explanation: "Australia is a major gold exporter. Gold up → AUD tends to strengthen." },
+            { pair: "USD/JPY", type: "positive", strength: "moderate", explanation: "Both are risk-sentiment pairs — rise in risk-on, fall in risk-off." }
+        ],
+        warnings: [
+            "Chinese PMI data releases can spike AUD/USD unexpectedly",
+            "As a risk currency, AUD can sell off hard during global uncertainty — wider SL needed",
+            "RBA decisions come at 03:30 UTC — middle of Tokyo session, can catch you off guard"
+        ],
+        tips: [
+            "If you're bullish on commodities or China's economy, AUD/USD is a good proxy trade",
+            "Tokyo session is prime time — Australian data drops between 00:30-02:30 UTC",
+            "AUD/NZD is less volatile if you want commodity exposure without full USD risk"
+        ]
+    },
+    "USD/CAD": {
+        pair: "USD/CAD",
+        displayName: "US Dollar / Canadian Dollar",
+        baseCurrency: "USD",
+        quoteCurrency: "CAD",
+        nickname: "Loonie",
+        bestSessions: ["New York", "London-New York overlap"],
+        worstSessions: ["Tokyo"],
+        avgDailyRange: 65,
+        avgRangeBySession: { "Tokyo": 25, "London": 40, "New York": 65, "London-NY overlap": 70 },
+        intelligenceSummary: "Driven by US and Canadian data. Watch oil prices — CAD is heavily correlated with crude. Most active during NY.",
+        drivers: [
+            "Oil prices (WTI crude) — Canada is a major oil exporter",
+            "Bank of Canada rate decisions",
+            "US and Canadian employment data (both release same day monthly)",
+            "Trade balance between US and Canada",
+            "US Federal Reserve policy"
+        ],
+        correlations: [
+            { pair: "Oil (WTI)", type: "negative", strength: "strong", explanation: "Oil up → CAD strengthens → USD/CAD falls. This is the key driver." },
+            { pair: "EUR/USD", type: "negative", strength: "moderate", explanation: "Both have USD — when USD weakens, EUR/USD rises but USD/CAD falls." }
+        ],
+        warnings: [
+            "Almost dead during Tokyo session — don't expect meaningful moves",
+            "Oil price spikes can override all technical analysis on this pair",
+            "US and Canadian employment data release simultaneously (13:30 UTC first Friday) — double volatility"
+        ],
+        tips: [
+            "Always check WTI crude oil before trading USD/CAD — it's the hidden driver",
+            "Best traded during NY session when both US and Canadian markets are active",
+            "This pair trends well — good for swing trades with wider TPs"
+        ]
+    },
+    "NZD/USD": {
+        pair: "NZD/USD",
+        displayName: "New Zealand Dollar / US Dollar",
+        baseCurrency: "NZD",
+        quoteCurrency: "USD",
+        nickname: "Kiwi",
+        bestSessions: ["Tokyo"],
+        worstSessions: ["New York (after London close)"],
+        avgDailyRange: 55,
+        avgRangeBySession: { "Tokyo": 40, "London": 35, "New York": 40, "London-NY overlap": 50 },
+        intelligenceSummary: "Similar to AUD/USD but less liquid. Best during early Asian session when NZ data releases.",
+        drivers: [
+            "Reserve Bank of New Zealand rate decisions",
+            "Dairy prices (New Zealand's key export)",
+            "Chinese economic data",
+            "Risk sentiment — similar to AUD but less liquid"
+        ],
+        correlations: [
+            { pair: "AUD/USD", type: "positive", strength: "strong", explanation: "Very similar drivers. Often move together." },
+            { pair: "AUD/NZD", type: "negative", strength: "moderate", explanation: "When NZD strengthens relative to AUD, AUD/NZD falls." }
+        ],
+        warnings: [
+            "Less liquid than AUD/USD — spreads can be wider",
+            "RBNZ decisions come at 01:00 UTC — early Tokyo session",
+            "Dairy auction results (GDT) can move this pair — released every 2 weeks"
+        ],
+        tips: [
+            "Best during early Asian session when NZ data releases",
+            "If choosing between AUD and NZD trades, check AUD/NZD to see which is relatively stronger",
+            "Kiwi tends to overreact to data — mean reversion setups work well after spikes"
+        ]
+    },
+    "EUR/JPY": {
+        pair: "EUR/JPY",
+        displayName: "Euro / Japanese Yen",
+        baseCurrency: "EUR",
+        quoteCurrency: "JPY",
+        nickname: "Yuppy",
+        bestSessions: ["Tokyo-London overlap", "London"],
+        worstSessions: ["Late New York"],
+        avgDailyRange: 90,
+        avgRangeBySession: { "Tokyo": 45, "London": 80, "New York": 55, "London-NY overlap": 75 },
+        intelligenceSummary: "Cross pair with wider spreads. Most volatile during Tokyo-London overlap when both regions are active.",
+        drivers: [
+            "ECB and BoJ policy divergence",
+            "Risk sentiment — falls in risk-off as JPY strengthens",
+            "Eurozone economic data",
+            "Japanese institutional capital flows"
+        ],
+        correlations: [
+            { pair: "EUR/USD", type: "positive", strength: "moderate", explanation: "EUR strength lifts both, but EUR/JPY adds JPY dynamics." },
+            { pair: "USD/JPY", type: "positive", strength: "strong", explanation: "Both reflect JPY weakness. When JPY sells off, both rise." }
+        ],
+        warnings: [
+            "Cross pair — wider spreads than EUR/USD or USD/JPY individually",
+            "Can be very volatile during risk events — combines EUR and JPY volatility",
+            "BoJ interventions affect all JPY pairs simultaneously"
+        ],
+        tips: [
+            "Tokyo-London overlap (07:00-09:00 UTC) is the sweet spot — both regions active",
+            "If you're bullish EUR and bearish JPY, this pair gives you both in one trade",
+            "Watch this pair as a risk sentiment indicator — sharp drops signal risk-off"
+        ]
+    },
+    "USD/CHF": {
+        pair: "USD/CHF",
+        displayName: "US Dollar / Swiss Franc",
+        baseCurrency: "USD",
+        quoteCurrency: "CHF",
+        nickname: "Swissy",
+        bestSessions: ["London", "London-New York overlap"],
+        worstSessions: ["Tokyo"],
+        avgDailyRange: 60,
+        avgRangeBySession: { "Tokyo": 25, "London": 55, "New York": 50, "London-NY overlap": 65 },
+        intelligenceSummary: "Safe haven pair. Inversely correlated with EUR/USD. Watch during risk-off events.",
+        drivers: [
+            "Swiss National Bank policy",
+            "US Federal Reserve policy",
+            "Risk sentiment — CHF is a safe haven like JPY",
+            "Gold prices (Switzerland's gold reserves)"
+        ],
+        correlations: [
+            { pair: "EUR/USD", type: "negative", strength: "strong", explanation: "Nearly perfect inverse. Trading both is essentially doubling your position." },
+            { pair: "EUR/CHF", type: "positive", strength: "moderate", explanation: "SNB often manages EUR/CHF, which affects USD/CHF indirectly." }
+        ],
+        warnings: [
+            "Almost perfectly inverse to EUR/USD — don't trade both in the same direction",
+            "SNB is known for surprise interventions (remember Jan 2015 flash crash)",
+            "Lower liquidity than EUR/USD — spreads can be wider"
+        ],
+        tips: [
+            "If your EUR/USD analysis says short, you could also go long USD/CHF — same thesis, different pair",
+            "Use as a confirmation: if EUR/USD is rising AND USD/CHF is falling, the move is likely genuine",
+            "Safe haven flows during crises push CHF stronger (USD/CHF down)"
+        ]
+    },
+    "GBP/JPY": {
+        pair: "GBP/JPY",
+        displayName: "British Pound / Japanese Yen",
+        baseCurrency: "GBP",
+        quoteCurrency: "JPY",
+        nickname: "The Beast / Dragon",
+        bestSessions: ["London", "Tokyo-London overlap"],
+        worstSessions: ["Late New York"],
+        avgDailyRange: 130,
+        avgRangeBySession: { "Tokyo": 50, "London": 120, "New York": 80, "London-NY overlap": 110 },
+        intelligenceSummary: "Known as 'The Beast' — extremely volatile. Wide pip ranges but also wide spreads. Best during London session.",
+        drivers: [
+            "BoE and BoJ policy divergence",
+            "Risk sentiment — extreme risk-on/risk-off pair",
+            "UK economic data",
+            "Japanese institutional flows"
+        ],
+        correlations: [
+            { pair: "GBP/USD", type: "positive", strength: "strong", explanation: "GBP strength drives both up." },
+            { pair: "USD/JPY", type: "positive", strength: "strong", explanation: "JPY weakness drives both up." },
+            { pair: "EUR/JPY", type: "positive", strength: "strong", explanation: "Both reflect JPY dynamics." }
+        ],
+        warnings: [
+            "Called 'The Beast' for a reason — daily range 130+ pips, can move 50 pips in minutes",
+            "NOT recommended for new traders — the volatility can blow through stop losses",
+            "Spreads are significantly wider than major pairs — factor 3-5 pips spread cost",
+            "Your risk per trade should be LOWER on this pair due to extreme volatility"
+        ],
+        tips: [
+            "If you trade this, use wider stop losses and smaller position sizes",
+            "London session is when this pair comes alive — Tokyo is relatively calm",
+            "Great for catching big moves but requires strict discipline — set SL and don't touch it"
+        ]
+    }
+};

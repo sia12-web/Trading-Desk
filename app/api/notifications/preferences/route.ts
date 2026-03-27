@@ -1,0 +1,81 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
+import { getNotificationPreferences, upsertNotificationPreferences } from '@/lib/data/push-subscriptions'
+
+export async function GET() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const prefs = await getNotificationPreferences(user.id)
+    return NextResponse.json({
+        preferences: prefs || {
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            morning_briefing: true,
+            session_transitions: true,
+            task_reminders: true,
+            market_alerts: true,
+            morning_time: '07:00',
+            quiet_start: '22:00',
+            quiet_end: '06:00',
+            telegram_chat_id: null,
+            telegram_enabled: false,
+            wake_up_time: '06:00',
+            trading_start_time: '07:00',
+            trading_end_time: '21:00',
+            enable_hourly_checkins: true,
+            enable_mental_coaching: true,
+            enable_break_reminders: true
+        }
+    })
+}
+
+export async function PUT(req: Request) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    try {
+        const body = await req.json()
+
+        const saved = await upsertNotificationPreferences(user.id, {
+            timezone: body.timezone,
+            morning_briefing: body.morning_briefing,
+            session_transitions: body.session_transitions,
+            task_reminders: body.task_reminders,
+            market_alerts: body.market_alerts,
+            morning_time: body.morning_time,
+            quiet_start: body.quiet_start,
+            quiet_end: body.quiet_end,
+            telegram_chat_id: body.telegram_chat_id,
+            telegram_enabled: body.telegram_enabled,
+            wake_up_time: body.wake_up_time,
+            trading_start_time: body.trading_start_time,
+            trading_end_time: body.trading_end_time,
+            enable_hourly_checkins: body.enable_hourly_checkins,
+            enable_mental_coaching: body.enable_mental_coaching,
+            enable_break_reminders: body.enable_break_reminders
+        })
+
+        if (!saved) {
+            return NextResponse.json(
+                { error: 'Failed to save preferences' },
+                { status: 500 }
+            )
+        }
+
+        return NextResponse.json({ preferences: saved })
+    } catch (error: any) {
+        console.error('Error saving notification preferences:', error)
+        return NextResponse.json(
+            { error: 'Failed to save preferences' },
+            { status: 500 }
+        )
+    }
+}
