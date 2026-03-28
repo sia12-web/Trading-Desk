@@ -13,6 +13,8 @@ import { GenerateStoryButton } from '../_components/GenerateStoryButton'
 import { PositionGuidanceCard } from '../_components/PositionGuidanceCard'
 import { PositionJourney } from '../_components/PositionJourney'
 import { ScenarioProximity } from '../_components/ScenarioProximity'
+import { MyStoryEditor } from '../_components/MyStoryEditor'
+import { BookOpen, UserCircle } from 'lucide-react'
 
 interface Episode {
     id: string
@@ -70,6 +72,7 @@ export default function PairStoryPage() {
     const [positionData, setPositionData] = useState<{ position: any; adjustments: any[] } | null>(null)
     const [allPositions, setAllPositions] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState<'ai' | 'my'>('ai')
 
     const loadEpisodes = useCallback(async () => {
         const res = await fetch(`/api/story/episodes?pair=${encodeURIComponent(pair)}&limit=50`)
@@ -205,7 +208,33 @@ export default function PairStoryPage() {
                 />
             </div>
 
-            {episode ? (
+            {/* Tab Switcher */}
+            <div className="flex items-center gap-1 p-1 bg-neutral-900 border border-neutral-800 rounded-2xl w-fit">
+                <button
+                    onClick={() => setActiveTab('ai')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                        activeTab === 'ai' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'text-neutral-500 hover:text-neutral-300'
+                    }`}
+                >
+                    <BookOpen size={14} />
+                    AI Core Story
+                </button>
+                <button
+                    onClick={() => setActiveTab('my')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                        activeTab === 'my' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'text-neutral-500 hover:text-neutral-300'
+                    }`}
+                >
+                    <UserCircle size={14} />
+                    My Story
+                </button>
+            </div>
+
+            {activeTab === 'my' ? (
+                <div className="h-[700px]">
+                    <MyStoryEditor pair={pair} />
+                </div>
+            ) : episode ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content (2/3) */}
                     <div className="lg:col-span-2 space-y-6">
