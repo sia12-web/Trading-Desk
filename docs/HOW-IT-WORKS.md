@@ -12,17 +12,18 @@
 4. [Intelligence Agents](#4-intelligence-agents)
 5. [Scenario Monitor](#5-scenario-monitor)
 6. [Position Tracker](#6-position-tracker)
-7. [Anti-Hallucination System](#7-anti-hallucination-system)
-8. [CMS Engine (Conditional Market Shaping)](#8-cms-engine)
-9. [Daily Plan](#9-daily-plan)
-10. [Unified Analysis](#10-unified-analysis)
-11. [OANDA Integration](#11-oanda-integration)
-12. [Dashboard](#12-dashboard)
-13. [Background Tasks](#13-background-tasks)
-14. [Notification System](#14-notification-system)
-15. [Cron Schedule](#15-cron-schedule)
-16. [Database Tables](#16-database-tables)
-17. [Security Model](#17-security-model)
+7. [How AI Handles Major News & Geopolitical Events](#7-how-ai-handles-major-news--geopolitical-events)
+8. [Anti-Hallucination System](#8-anti-hallucination-system)
+9. [CMS Engine (Conditional Market Shaping)](#9-cms-engine)
+10. [Daily Plan](#10-daily-plan)
+11. [Unified Analysis](#11-unified-analysis)
+12. [OANDA Integration](#12-oanda-integration)
+13. [Dashboard](#13-dashboard)
+14. [Background Tasks](#14-background-tasks)
+15. [Notification System](#15-notification-system)
+16. [Cron Schedule](#16-cron-schedule)
+17. [Database Tables](#17-database-tables)
+18. [Security Model](#18-security-model)
 
 ---
 
@@ -637,7 +638,184 @@ The system doesn't try to **predict** — it tries to **manage**. The AI knows:
 
 ---
 
-## 7. Anti-Hallucination System
+## 7. How AI Handles Major News & Geopolitical Events
+
+### The Core Philosophy: React, Don't Predict
+
+When the user asks: *"What if war breaks out with Iran? What if the USA wins vs. Iran wins?"* — the AI's answer is: **"I don't know, and I don't try to predict."**
+
+The system does NOT attempt to forecast geopolitical outcomes. Instead, it **reacts to structural changes in price** caused by those outcomes. This is a critical distinction.
+
+### The News Pipeline
+
+#### Step 1: News Collection (`lib/story/news-summarizer.ts`)
+
+Every time a Story episode is generated, the system fetches:
+- **Headlines**: Recent news from ForexFactory API
+- **Economic Calendar**: High-impact events (NFP, CPI, FOMC, central bank decisions)
+
+News is **filtered by pair currencies** (e.g., for EUR/USD, only events affecting EUR or USD are included).
+
+#### Step 2: News Intelligence Agent (`lib/story/agents/news-intelligence.ts`)
+
+One of the 4 daily intelligence agents (runs at 4AM UTC before story generation):
+- **Model**: Gemini (gemini-3-flash-preview)
+- **Purpose**: Deep macro/fundamental analysis
+- **Outputs**:
+  - `macro_environment`: Global risk sentiment (risk-on/risk-off)
+  - `central_bank_analysis`: Fed/ECB/BOJ paths (hawkish/dovish signals)
+  - `geopolitical_factors`: Wars, elections, trade conflicts
+  - `sentiment_shift`: Direction and magnitude of fundamental sentiment change
+  - `key_drivers`: Top 3 factors moving the pair
+
+This report is stored in `story_agent_reports` and injected into the Claude narrator's prompt as "Intelligence Briefing."
+
+#### Step 3: News Summarization (`StoryNewsContext`)
+
+Gemini processes the filtered news and produces:
+```typescript
+{
+  sentiment: 'bullish' | 'bearish' | 'neutral',
+  key_drivers: ['Central bank hawkish pivot', 'Risk appetite improving'],
+  fundamental_narrative: 'Fed signaling rate cuts while ECB holds firm...',
+  avoidTrading: true | false  // true if high-impact news within 2 hours
+}
+```
+
+The `avoidTrading` flag is critical — if a major news event (NFP, FOMC, war declaration) is imminent, the AI will factor this into position guidance.
+
+#### Step 4: Claude Narrator Receives News Context
+
+The narrator prompt (`lib/story/prompts/claude-narrator.ts`) includes:
+- Line 218: `${news.avoidTrading ? '\n⚠️ HIGH-IMPACT NEWS IMMINENT — factor this into the story.' : ''}`
+- Line 576: `Geopolitical Factors: ${news.geopolitical_factors.join('; ') || 'None significant'}`
+
+Claude sees:
+1. **Technical structure** (AMD phases, liquidity, scenarios)
+2. **Fundamental context** (news, central banks, geopolitics)
+3. **Position state** (current entries, P&L, adjustments)
+
+### What Happens During a Black Swan Event?
+
+Let's walk through **"War with Iran"** as an example:
+
+#### Before the Event
+- EUR/USD is in Accumulation phase
+- Active scenario: "Bullish breakout above 1.0920"
+- User has 0.1 lot long position from 1.0850
+- Trigger: 1.0920 (direction: above), Invalidation: 1.0820 (direction: below)
+
+#### Event Occurs (e.g., USA attacks Iran)
+- **Immediate market reaction**: Risk-off deluge
+- EUR/USD plunges 200 pips in 2 hours to 1.0650
+- Scenario invalidated (price smashed through 1.0820)
+
+#### What the AI Does (Step-by-Step)
+
+**1. Scenario Monitor Bot Detects Invalidation** (`lib/story/scenario-monitor.ts`)
+- Runs every 15 minutes
+- Checks: `price < 1.0820` (invalidation_level, direction: below)
+- **Auto-resolves scenario** as `invalidated`
+- **Auto-triggers new episode generation** (if >6 hours since last bot-triggered episode)
+
+**2. News Intelligence Agent Captures Context** (next 4AM run)
+- Detects: `geopolitical_factors: ['Iran-USA military conflict escalation']`
+- Macro environment: `risk_off`
+- Sentiment shift: `strong_bearish` (safe-haven flows to USD, away from EUR)
+
+**3. New Episode Generated**
+The narrator receives:
+- **Technical**: Structure broken, Accumulation phase invalidated, new Manipulation phase
+- **Fundamental**: War narrative, risk-off, USD strength
+- **Position state**: User's long position hit stop-loss at 1.0820 (-30 pips, -$30)
+
+Claude writes an episode like:
+
+> **Episode Title**: "The Safe-Haven Deluge"
+>
+> The market has spoken with violence. The Iran-USA conflict ignited a flight to safety, and EUR/USD became collateral damage. The Buyers, who seemed in control just hours ago, were obliterated. The 1.0820 support — which looked like a fortress — shattered like glass.
+>
+> **What Happened**:
+> - Risk-off tsunami: S&P 500 -3%, Gold +4%, USD +2%
+> - EUR/USD plunged 200 pips in 2 hours
+> - Your bullish scenario invalidated (price smashed 1.0820)
+> - Position stopped out at 1.0820: -30 pips, -$30
+>
+> **The New Structure**:
+> We are now in **Manipulation phase** — the Sellers have seized control. The question is: where do they pause?
+>
+> Potential floor: **1.0580** (Monthly support from 2023)
+> Resistance overhead: **1.0750** (now acting as ceiling)
+>
+> **Position Guidance**: FLAT (no position)
+> - Do NOT try to "buy the dip" yet — this is a knife falling
+> - Wait for stabilization (price consolidates for 24+ hours)
+> - Let the dust settle before re-entering
+> - If war escalates further, expect another leg down to 1.0500
+>
+> **New Scenarios**:
+> 1. **Bearish continuation**: Break below 1.0650 → target 1.0580
+> 2. **Mean reversion bounce**: Hold 1.0650, bounce to 1.0750 (short opportunity)
+
+**4. User Sees the Episode**
+- Old scenario marked "invalidated"
+- New episode explains what happened (fundamentals + technicals)
+- Position guidance: FLAT, avoid catching knives
+- New scenarios reflect the risk-off reality
+
+#### If the War Outcome Changes (e.g., "USA Wins" or "Iran Wins")
+
+The AI **still doesn't predict** which outcome will occur. Instead:
+- If peace talks emerge → Risk-on, EUR/USD rallies back
+- If conflict escalates → More risk-off, USD strength continues
+- Scenario Monitor keeps checking prices vs. trigger/invalidation levels
+- New episodes generated as structure evolves
+
+**The AI follows the price, not the headline.** Headlines provide context, but price action is the truth.
+
+### Season Finales Triggered by Fundamental Shifts
+
+From the narrator prompt (line 470):
+> "Consider ending the season if... a fundamental shift occurred (central bank policy change, geopolitical event)"
+
+When a major event like "war with Iran" occurs, Claude can choose to end the current season and start Season 2. This resets the Bible, allowing the AI to write a fresh narrative arc without being anchored to the old bullish thesis.
+
+### The `avoidTrading` Flag
+
+If the News Intelligence Agent detects high-impact news within 2 hours (e.g., FOMC announcement, war escalation, central bank decision), the `avoidTrading` flag is set to `true`.
+
+Claude's response:
+> "⚠️ HIGH-IMPACT NEWS IMMINENT — avoid opening new positions. If you have an open position, tighten stops or close entirely. Volatility will spike, and slippage will be severe."
+
+This protects the user from getting whipsawed during event-driven chaos.
+
+### What the AI Does NOT Do
+
+❌ **Predict geopolitical outcomes** ("USA will win the war")
+❌ **Predict news events** ("Iran will attack next week")
+❌ **Recommend positions based on headlines alone** ("War = buy USD")
+
+### What the AI DOES Do
+
+✅ **React to structural changes** (price broke support = invalidate scenario)
+✅ **Incorporate fundamental context** (war = risk-off = USD strength)
+✅ **Protect capital during chaos** (avoidTrading flag, tighten stops)
+✅ **Adapt scenarios to new reality** (bullish thesis dead → new bearish scenarios)
+✅ **Update Bible with new arc** (Season 2: risk-off regime)
+
+### Summary: News as Context, Not Prediction
+
+When you ask: *"What if war with Iran goes the other way?"* — the system's answer is:
+
+**"I don't know which way it will go. But I'll watch the price. If EUR/USD rallies (peace talks), I'll adjust scenarios bullishly. If it collapses (escalation), I'll adjust scenarios bearishly. The market is smarter than me — I follow its lead."**
+
+The AI is not a fortune teller. It's a **structural analyst with fundamental awareness**. It uses news to understand *why* price is moving, but it doesn't try to predict *what* news will happen or *how* news will resolve.
+
+This is the only sustainable approach in a chaotic, unpredictable market.
+
+---
+
+## 8. Anti-Hallucination System
 
 Five layers of protection against AI price fabrication:
 
@@ -652,7 +830,7 @@ Five layers of protection against AI price fabrication:
 
 ---
 
-## 8. CMS Engine
+## 9. CMS Engine
 
 **Conditional Market Shaping** — programmatic pattern detection enhanced by AI interpretation.
 
@@ -686,7 +864,7 @@ The CMS page (`/cms`) is not visible in navigation — it's an internal AI data 
 
 ---
 
-## 9. Daily Plan
+## 10. Daily Plan
 
 `lib/ai/prompts-daily-plan.ts`
 
@@ -700,7 +878,7 @@ AI coach "Manouk" generates a personalized morning briefing with 8-12 focused ta
 
 ---
 
-## 10. Unified Analysis
+## 11. Unified Analysis
 
 `lib/ai/prompts-unified-analysis.ts` + `lib/analysis/data-aggregator.ts`
 
@@ -712,7 +890,7 @@ Single AI call produces: Elliott Wave counting, strategy gate recommendation, tr
 
 ---
 
-## 11. OANDA Integration
+## 12. OANDA Integration
 
 `lib/oanda/client.ts`
 
@@ -742,7 +920,7 @@ Account mode stored in `oanda-mode` cookie. Candle data always fetched from demo
 
 ---
 
-## 12. Dashboard
+## 13. Dashboard
 
 `app/(dashboard)/page.tsx`
 
@@ -780,7 +958,7 @@ Account mode stored in `oanda-mode` cookie. Candle data always fetched from demo
 
 ---
 
-## 13. Background Tasks
+## 14. Background Tasks
 
 Long-running operations (story generation, CMS analysis) persist across page navigation.
 
@@ -810,7 +988,7 @@ pollTask(taskId, onProgress, onComplete, onError)
 
 ---
 
-## 14. Notification System
+## 15. Notification System
 
 | Channel | Tech | Used By |
 |---------|------|---------|
@@ -821,7 +999,7 @@ Dispatcher: `lib/notifications/notifier.ts` routes based on user's preferences.
 
 ---
 
-## 15. Cron Schedule
+## 16. Cron Schedule
 
 All scheduled via Supabase `pg_cron` + `pg_net`. Authenticated with `Bearer CRON_SECRET`.
 
@@ -834,7 +1012,7 @@ All scheduled via Supabase `pg_cron` + `pg_net`. Authenticated with `Bearer CRON
 
 ---
 
-## 16. Database Tables
+## 17. Database Tables
 
 ### Core (User Data — PRESERVED on AI reset)
 `trader_profile`, `risk_rules`, `trades`, `trade_pnl`, `trade_screenshots`, `trade_strategies`, `trade_sync_log`, `execution_log`, `calendar_events`, `user_pair_notes`, `trading_guru_notes`
@@ -856,7 +1034,7 @@ All scheduled via Supabase `pg_cron` + `pg_net`. Authenticated with `Bearer CRON
 
 ---
 
-## 17. Security Model
+## 18. Security Model
 
 | Control | Implementation |
 |---------|---------------|
