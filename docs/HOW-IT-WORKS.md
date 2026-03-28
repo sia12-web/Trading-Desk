@@ -327,6 +327,136 @@ The active position (direction, entry, SL/TP, unrealized P&L, full adjustment hi
 
 **Tables**: `story_positions`, `story_position_adjustments`
 
+### Position Sizing & Leverage Management
+
+**Critical Philosophy**: The AI has access to your capital and leverage information. It understands that brokers profit when traders lose, and that over-leveraging is the #1 cause of retail account blowups.
+
+#### How Position Sizing Works
+
+When Claude outputs `position_guidance`, it includes:
+```json
+{
+  "action": "enter_long",
+  "entry_price": 1.0850,
+  "stop_loss": 1.0820,
+  "take_profits": [1.0890, 1.0920, 1.0950],
+  "position_size_lots": 0.05,
+  "risk_percent": 1.0,
+  "reasoning": "Conservative entry due to volatility spike..."
+}
+```
+
+#### AI's Position Sizing Context (What Claude Knows)
+
+Each episode, Claude receives:
+1. **Your risk rules** from `risk_rules` table:
+   - Max risk per trade (% of balance)
+   - Max daily loss limit
+   - Max open trades simultaneously
+   - Max position size (lots)
+   - Min reward/risk ratio
+2. **Your OANDA account** from `getAccountSummary()`:
+   - Available balance (USD)
+   - Current margin used
+   - Unrealized P&L on open positions
+   - Open trade count
+3. **Current market conditions**:
+   - Volatility regime (spike/hot/normal/cold)
+   - ATR (pip volatility measurement)
+   - Spread size (broker's cut)
+   - Recent drawdown history
+
+#### Conservative Sizing Rules (Hardcoded in Narrator Prompt)
+
+Claude is instructed to:
+
+| Volatility Regime | Max Risk per Trade | Lot Size Multiplier |
+|-------------------|-------------------|---------------------|
+| **Spike** (ATR >1.5x) | 0.5% of balance | 0.25x normal |
+| **Hot** (ATR 1.1-1.5x) | 0.75% of balance | 0.5x normal |
+| **Normal** (ATR 0.9-1.1x) | 1.0% of balance | 1.0x normal |
+| **Cold** (ATR <0.9x) | 1.5% of balance | 1.25x normal |
+
+**Additional constraints**:
+- If account is down >5% this week: Halve all position sizes
+- If 3+ consecutive losses: Skip next trade (wait for confirmation)
+- If open positions already at 50%+ margin: Wait, no new entries
+- If entry-to-SL distance >2x ATR: Skip (stop too wide = overleveraged)
+- Never exceed user's `max_position_size` from risk rules (hard limit)
+
+#### Anti-Broker Exploitation
+
+The AI is explicitly told:
+```
+"Brokers make money when traders lose. Retail traders typically lose due to:
+1. Over-leveraging (risking 5-10% per trade)
+2. No stop losses (letting losses run)
+3. Revenge trading after losses
+4. Trading during news spikes (widened spreads)
+
+Your job: Keep the user ALIVE. Conservative sizing > aggressive profits.
+If volatility is spiking or the user is in drawdown, recommend WAIT."
+```
+
+#### Position Guidance Types
+
+| Action | When AI Recommends |
+|--------|-------------------|
+| `enter_long` / `enter_short` | High-confidence setup + user has capital + volatility is normal |
+| `wait` | Unclear structure, volatility spike, user in drawdown, or spread too wide |
+| `hold` | Existing position is still valid, no adjustments needed |
+| `adjust` | Move SL to breakeven, trail SL, or take partial profit at TP1 |
+| `close` | Invalidation imminent or profit target hit |
+
+#### Lot Size Calculation Example
+
+```
+User balance: $10,000
+Risk per trade: 1.0% = $100
+Entry: 1.0850
+Stop Loss: 1.0820
+Risk in pips: 30 pips
+
+Lot size = Risk $ / (Pips at risk × Pip value)
+         = $100 / (30 × $10 per pip for 0.1 lot)
+         = 0.33 lots
+
+But if volatility is "hot" → multiply by 0.5 → 0.165 lots (rounded to 0.15)
+```
+
+Claude outputs the final lot size in `position_size_lots`, respecting all constraints.
+
+#### User Control
+
+The user **always** has final say:
+1. AI suggests position → stored as `status='suggested'` in `story_positions`
+2. User reviews recommendation in UI (`PositionGuidanceCard`)
+3. User clicks "Activate Position" → `activatePosition()` sets `status='active'`
+4. User manually executes via `/trade` page (OANDA API)
+5. User can link OANDA trade to Story position for P&L tracking
+
+**The AI never auto-executes trades.** It only provides guidance.
+
+#### Monitoring Open Positions
+
+If a Story position is active, Claude receives it in the next episode:
+```
+ACTIVE STORY POSITION
+Direction: LONG
+Entry: 1.0850
+Current SL: 1.0830 (breakeven)
+Current TP1: 1.0890 (hit), TP2: 1.0920 (pending), TP3: 1.0950 (pending)
+Unrealized P&L: +40 pips
+Opened in: Season 2, Episode 12
+Adjustments: 3 (SL to breakeven, partial close at TP1, TP2 trail)
+```
+
+Claude can then recommend:
+- Trail SL further if momentum continues
+- Close remaining position if invalidation approaches
+- Partial close at TP2 to lock in profit
+- Hold if structure is still intact
+
 ---
 
 ## 7. Anti-Hallucination System
