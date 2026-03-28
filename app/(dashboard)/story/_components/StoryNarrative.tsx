@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { Highlight } from '@tiptap/extension-highlight'
@@ -24,7 +24,6 @@ export function StoryNarrative({ content, episodeId }: StoryNarrativeProps) {
     const [highlightMode, setHighlightMode] = useState(false)
     const [saving, setSaving] = useState(false)
     const [savedHtml, setSavedHtml] = useState<string | null>(null)
-    const selectionRef = useRef<{ hasSelection: boolean }>({ hasSelection: false })
 
     // Load any previously-saved highlighted HTML for this episode
     useEffect(() => {
@@ -48,10 +47,10 @@ export function StoryNarrative({ content, episodeId }: StoryNarrativeProps) {
                        'prose-ul:text-neutral-300 prose-ol:text-neutral-300 ' +
                        'prose-code:text-blue-300 prose-code:bg-blue-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded',
             },
-        },
-        onSelectionUpdate: ({ editor: e }) => {
-            const { from, to } = e.state.selection
-            selectionRef.current.hasSelection = from !== to
+            // Block ALL keyboard input — content is read-only, only highlights are allowed
+            handleKeyDown: () => true,
+            handlePaste: () => true,
+            handleDrop: () => true,
         },
     })
 
@@ -114,12 +113,13 @@ export function StoryNarrative({ content, episodeId }: StoryNarrativeProps) {
 
     const applyHighlight = (color: string) => {
         if (!editor) return
-        editor.chain().focus().toggleHighlight({ color }).run()
+        // No .focus() — prevents cursor jumping to end of document
+        editor.chain().toggleHighlight({ color }).run()
     }
 
     const removeHighlight = () => {
         if (!editor) return
-        editor.chain().focus().unsetHighlight().run()
+        editor.chain().unsetHighlight().run()
     }
 
     // Read-only markdown view (default)
