@@ -22,3 +22,15 @@ export async function GET(
 
     return NextResponse.json({ episode, scenarios })
 }
+
+export async function PATCH(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    const user = await getAuthUser()
+    const { id } = await params
+    const { narrative } = await req.json()
+    const { updateEpisodeNarrative } = await import('@/lib/data/stories')
+    await updateEpisodeNarrative(id, user!.id, narrative)
+    return NextResponse.json({ success: true })
+}

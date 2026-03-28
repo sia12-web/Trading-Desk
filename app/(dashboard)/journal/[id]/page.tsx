@@ -143,7 +143,7 @@ export default async function TradeDetailPage({ params }: TradeDetailPageProps) 
                     <div className="flex-1">
                         <p className="font-bold text-amber-400 text-sm">Ready to Execute</p>
                         <p className="text-xs text-neutral-400 mt-0.5">
-                            This trade is planned and saved locally. It has not been sent to OANDA yet. Use the buttons above to get AI advice or execute when ready.
+                            This trade is planned and saved locally. It has not been sent to OANDA yet. Use the buttons above to execute when ready.
                         </p>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-neutral-500">

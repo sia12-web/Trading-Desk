@@ -280,7 +280,7 @@ export default function PairStoryPage() {
                         {/* Narrative */}
                         <section className="bg-neutral-900/30 border border-neutral-800 rounded-xl p-6">
                             <h2 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-4">Story</h2>
-                            <StoryNarrative content={episode.narrative} />
+                            <StoryNarrative content={episode.narrative} episodeId={episode.id} />
                         </section>
 
                         {/* Characters */}

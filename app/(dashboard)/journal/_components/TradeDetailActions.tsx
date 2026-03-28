@@ -81,13 +81,6 @@ export function TradeDetailActions({ trade }: TradeDetailActionsProps) {
                             <Edit size={18} />
                             Edit Plan
                         </Link>
-                        <Link
-                            href={`/ai-coach?tradeId=${trade.id}&mode=pre_trade&pair=${pairParam}`}
-                            className="flex items-center gap-2 px-6 py-3.5 bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600/30 text-purple-400 font-bold rounded-2xl transition-all shadow-lg active:scale-95"
-                        >
-                            <Brain size={18} />
-                            Get AI Advice
-                        </Link>
                         <button
                             onClick={() => setShowExecuteConfirm(true)}
                             className="flex items-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-500 text-white font-bold rounded-2xl transition-all shadow-lg shadow-green-900/20 active:scale-95"

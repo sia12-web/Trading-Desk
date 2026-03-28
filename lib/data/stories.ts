@@ -168,6 +168,17 @@ export async function createEpisode(
     return data
 }
 
+export async function updateEpisodeNarrative(episodeId: string, userId: string, narrative: string) {
+    const supabase = await getDefaultClient()
+    const { error } = await supabase
+        .from('story_episodes')
+        .update({ narrative })
+        .eq('id', episodeId)
+        .eq('user_id', userId)
+
+    if (error) throw error
+}
+
 export async function getNextEpisodeNumber(userId: string, pair: string, client?: SupabaseClient): Promise<number> {
     const supabase = client || await getDefaultClient()
     const { data } = await supabase

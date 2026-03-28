@@ -95,6 +95,12 @@ export function GenerateStoryButton({ pair, episodeCount, onComplete, autoGenera
         )
     }
 
+    // Only show button if it's the first episode (Begin the Story)
+    // Subsequent episodes are generated automatically by the system
+    if (!isFirstEpisode) {
+        return null
+    }
+
     return (
         <button
             onClick={handleGenerate}

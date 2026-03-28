@@ -24,8 +24,10 @@ All pages live under `app/(dashboard)/` with shared layout in `DashboardShell.ts
 | Route | Page | Purpose |
 |-------|------|---------|
 | `/` | Dashboard | DailyPlanWidget + Market Indices + Account overview |
-| `/story` | Story Hub | Pair subscriptions, episode list, scenario tracking |
-| `/story/[pair]` | Story Detail | Episodes + scenarios for a specific pair |
+| `/story` | Story Hub | Pair subscriptions, My Story tab, episode list |
+| `/story/[pair]` | Story Detail | Episodes + scenarios + private notes per pair |
+| `/trading-gurus` | Trading Gurus | Private library of trading mentors & wisdom |
+| `/trading-gurus/[guru]` | Guru Vault | Interactive workspace for mentor insights |
 | `/ai-usage` | AI Usage | Token usage, costs, and performance per model |
 | `/trade` | Trade Execution | Manual trade form with OANDA integration |
 | `/positions` | Open Positions | Live OANDA positions + planned trades |
@@ -87,6 +89,13 @@ All pages live under `app/(dashboard)/` with shared layout in `DashboardShell.ts
 | GET/POST | `/api/story/subscriptions` | List/create pair subscriptions |
 | GET/DELETE | `/api/story/subscriptions/[pair]` | Get/remove pair subscription |
 | GET/PUT | `/api/story/bible` | Get/update story bible |
+| GET/POST | `/api/story/my-story` | Private note handler (AI-excluded) |
+
+### Trading Gurus (Private Knowledge)
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET/POST | `/api/trading-gurus` | CRUD single guru topic (AI-excluded) |
+| GET | `/api/trading-gurus/list` | List mentors and topics |
 
 ### AI Usage
 | Method | Endpoint | Purpose |
@@ -315,6 +324,8 @@ Auto-generated weekly via cron. Story pipeline consumes the latest analysis as i
 | `execution_log` | OANDA API call tracking |
 | `trade_sync_log` | OANDA sync session history |
 | `calendar_events` | Trading calendar with recurring support |
+| `user_pair_notes` | Private "My Story" notes (RLS-protected, AI-excluded) |
+| `trading_guru_notes` | Private mentor wisdom notes (RLS-protected, AI-excluded) |
 | `technical_analyses` | Various analysis types |
 
 ### AI & Analysis Tables
@@ -499,6 +510,7 @@ Long-running operations that persist across page navigation.
 - **Headers**: HSTS, X-Frame-Options DENY, nosniff, strict Referrer-Policy
 - **No Raw SQL**: All queries via Supabase JS client (parameterized)
 - **Server-only secrets**: AI API keys never exposed to client
+- **Private Data Vaults**: `user_pair_notes` and `trading_guru_notes` are strictly for human consumption; they are never sent to AI providers or analyzed by system agents.
 - **CORS**: Handled by Next.js defaults + Supabase config
 
 ---
